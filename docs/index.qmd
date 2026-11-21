@@ -4,13 +4,32 @@ title: "![](assets/logo.svg){.brand-mark .light-content}![](assets/logo-dark.svg
 
 An extensible, modern Laplace-approximation library for PyTorch, built on a plugin system.
 
-Curvatures, likelihoods, priors, predictives and model integrations are all plugins, and the built-in ones are also plugins! It runs on `torch.func` and Curvlinops. The goal is flexibility and extensibility: Every Laplace method, on any model. 
+Curvatures, likelihoods, priors, predictives and model integrations are all plugins, and the built-in ones are also plugins! It runs on `torch.func` and Curvlinops. The goal is flexibility and extensibility: Every Laplace method, on any model.
 
 ```bash
 pip install laplacekit
-pip install "laplacekit[transformers]"  # lk.transformers: Laplace-LoRA on language models
-pip install "laplacekit[diffusers]"     # lk.diffusers: diffusion models
-pip install "laplacekit[all]"           # every first-party plugin
+```
+
+## First-party plugins
+
+Available first party plugins are: HuggingFace's `transformers`, `diffusers` models, reward models (Bradley-Terry likelihood), subnetwork Laplace, heteroscedastic Laplace, function-space GP-Laplace, and marginal-likelihood-based Laplace. See [Quickstart](quickstart/basics.py).
+
+Install all of them:
+
+```bash
+pip install "laplacekit[all]"
+```
+
+Or individually:
+
+```bash
+pip install "laplacekit[transformers]"
+pip install "laplacekit[diffusers]"
+pip install "laplacekit[subnet]"
+pip install "laplacekit[heteroscedastic]"
+pip install "laplacekit[reward]"
+pip install "laplacekit[gp]"
+pip install "laplacekit[marglik]"
 ```
 
 ::: {.panel-tabset}
