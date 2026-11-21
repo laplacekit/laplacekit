@@ -7,6 +7,16 @@
 # We take a pretrained DDPM on MNIST, fit a Laplace approximation to the last
 # layer of its UNet, and carry a variance for every pixel through the sampling
 # loop.
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-diffusers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/diffusers)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[diffusers]" torchvision
+# ```
+# :::
 
 # %%
 import warnings
@@ -22,9 +32,14 @@ import laplacekit as lk
 
 huggingface_hub.utils.disable_progress_bars()
 huggingface_hub.logging.set_verbosity_error()
-warnings.filterwarnings("ignore", category=UserWarning)  # speed and deprecation notices
+warnings.filterwarnings(
+    "ignore", category=UserWarning
+)  # speed and deprecation notices
 
-REPO, REVISION = "1aurent/ddpm-mnist", "e6ee37a720cd5c9b48fa5be809e5926f49f38246"
+REPO, REVISION = (
+    "1aurent/ddpm-mnist",
+    "e6ee37a720cd5c9b48fa5be809e5926f49f38246",
+)
 unet = UNet2DModel.from_pretrained(REPO, revision=REVISION).eval()
 scheduler = DDPMScheduler.from_pretrained(REPO, revision=REVISION)
 
@@ -63,9 +78,15 @@ var = torch.zeros_like(x)
 with torch.no_grad():
     for i, t in enumerate(timesteps):
         ab = alpha_bar[t]
-        ab_next = alpha_bar[timesteps[i + 1]] if i + 1 < len(timesteps) else torch.tensor(1.0)
+        ab_next = (
+            alpha_bar[timesteps[i + 1]]
+            if i + 1 < len(timesteps)
+            else torch.tensor(1.0)
+        )
 
-        eps = lk.predict_outputs(post, {"sample": x, "timestep": torch.tensor(t)})
+        eps = lk.predict_outputs(
+            post, {"sample": x, "timestep": torch.tensor(t)}
+        )
         x0 = (x - (1 - ab).sqrt() * eps.mean) / ab.sqrt()
         inside = (x0.abs() <= 1).float()
 

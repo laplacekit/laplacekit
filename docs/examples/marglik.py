@@ -165,7 +165,11 @@ def decay(seed: int, value: float):
 def scores(post) -> list[float]:
     v = -lk.predict(post, x_test).log_prob(y_test).squeeze()
 
-    return [float(post.log_marglik()), float(v[on_data].mean()), float(v[~on_data].mean())]
+    return [
+        float(post.log_marglik()),
+        float(v[on_data].mean()),
+        float(v[~on_data].mean()),
+    ]
 
 
 runs = {(0, "layerwise"): trained}
@@ -176,16 +180,22 @@ for seed in range(3):
         if (seed, prior) not in runs:
             runs[seed, prior] = marglik(seed, prior)
 
-        rows.setdefault(f"marglik, {prior}", []).append(scores(runs[seed, prior].posterior))
+        rows.setdefault(f"marglik, {prior}", []).append(
+            scores(runs[seed, prior].posterior)
+        )
 
     for value in (1e-4, 1e-3, 1e-2):
-        rows.setdefault(f"decay {value:g}", []).append(scores(decay(seed, value)))
+        rows.setdefault(f"decay {value:g}", []).append(
+            scores(decay(seed, value))
+        )
 
 print(f"{'':18} {'log Z':>16} {'NLL on data':>16} {'past data':>16}")
 
 for name, values in rows.items():
     a = torch.tensor(values)
-    cells = " ".join(f"{m:8.3f} ± {s:.3f}" for m, s in zip(a.mean(0), a.std(0), strict=True))
+    cells = " ".join(
+        f"{m:8.3f} ± {s:.3f}" for m, s in zip(a.mean(0), a.std(0), strict=True)
+    )
     print(f"{name:18} {cells}")
 
 # %% [markdown]
@@ -282,7 +292,10 @@ noise = parts.aleatoric.sqrt().squeeze()
 
 for at in [1.0, 2.0, 3.0, 4.0]:
     i = int((grid.squeeze() - at).abs().argmin())
-    print(f"x = {at}: noise std {float(noise[i]):.3f} (true {0.05 + 0.15 * at:.3f})")
+    print(
+        f"x = {at}: noise std {float(noise[i]):.3f} (true "
+        f"{0.05 + 0.15 * at:.3f})"
+    )
 
 # %%
 g = grid.squeeze()

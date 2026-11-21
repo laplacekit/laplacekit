@@ -85,7 +85,11 @@ import torch
 import transformers
 from datasets import load_dataset
 from peft import LoraConfig, PeftModel, get_peft_model
-from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import (
+    AutoModelForCausalLM,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
 import laplacekit as lk
 
@@ -93,7 +97,9 @@ transformers.logging.set_verbosity_error()
 transformers.utils.logging.disable_progress_bar()
 datasets.disable_progress_bars()
 huggingface_hub.logging.set_verbosity_error()
-warnings.filterwarnings("ignore", category=FutureWarning)  # deprecation notices from transformers
+warnings.filterwarnings(
+    "ignore", category=FutureWarning
+)  # deprecation notices from transformers
 
 # %% [markdown]
 # ## Model and data
@@ -123,10 +129,16 @@ ADAPTER_REV = "c302741c3f2f89a22504f88fb7b6ad27e6ad1319"
 
 tok = AutoTokenizer.from_pretrained(ADAPTER, revision=ADAPTER_REV)
 base = AutoModelForSequenceClassification.from_pretrained(
-    BASE, revision=BASE_REV, num_labels=6, dtype=torch.float32, attn_implementation="eager"
+    BASE,
+    revision=BASE_REV,
+    num_labels=6,
+    dtype=torch.float32,
+    attn_implementation="eager",
 )
 base.config.pad_token_id = tok.pad_token_id
-model = PeftModel.from_pretrained(base, ADAPTER, revision=ADAPTER_REV, is_trainable=True)
+model = PeftModel.from_pretrained(
+    base, ADAPTER, revision=ADAPTER_REV, is_trainable=True
+)
 _ = model.eval()
 
 # %% [markdown]
@@ -153,7 +165,11 @@ print(classes)
 
 # %%
 def short(split, n):
-    rows = emotion[split].shuffle(seed=0).filter(lambda r: len(r["text"].split()) <= 10)
+    rows = (
+        emotion[split]
+        .shuffle(seed=0)
+        .filter(lambda r: len(r["text"].split()) <= 10)
+    )
     rows = rows.select(range(n))
 
     return list(rows["text"]), torch.tensor(list(rows["label"]))
@@ -181,7 +197,9 @@ batches = [
 
 # %%
 task = lk.transformers.SequenceClassification()
-post = lk.transformers.laplace_lora(model, batches, task=task, n_data=len(train))
+post = lk.transformers.laplace_lora(
+    model, batches, task=task, n_data=len(train)
+)
 print(post)
 
 # %% [markdown]
@@ -205,9 +223,11 @@ test_texts, y_test = short("test", 32)
 
 
 def corrupt(text, rate, rng):
-    """Drop words, swap two letters in a word, and swap neighbouring words, each at `rate`."""
+    """Drop words, swap letters and swap neighbouring words, each at `rate`."""
 
-    words = [w for w in text.split() if rng.random() >= rate] or text.split()[:1]
+    words = [w for w in text.split() if rng.random() >= rate] or text.split()[
+        :1
+    ]
 
     for i, w in enumerate(words):
         if len(w) > 2 and rng.random() < rate:
@@ -249,10 +269,12 @@ for rate, texts in shifted.items():
 
 # %%
 def auroc(score, wrong):
-    """P(score of a wrong prediction > score of a right one), ties counting one half."""
+    """P(a wrong prediction scores above a right one), ties counting half."""
 
     pos, neg = score[wrong], score[~wrong]
-    greater = (pos[:, None] > neg[None]).float() + 0.5 * (pos[:, None] == neg[None]).float()
+    greater = (pos[:, None] > neg[None]).float() + 0.5 * (
+        pos[:, None] == neg[None]
+    ).float()
 
     return greater.mean()
 
@@ -281,7 +303,9 @@ for rate, texts in shifted.items():
 
     probs[rate] = (p_map, lk.predict(post, x).probs)
 
-print(f"{'rate':<5} {'':<8}" + "".join(f"{k:>9}" for k in metrics(p_map, y_test)))
+print(
+    f"{'rate':<5} {'':<8}" + "".join(f"{k:>9}" for k in metrics(p_map, y_test))
+)
 
 for rate, (p_map, p_lap) in probs.items():
     for name, p in [("MAP", p_map), ("Laplace", p_lap)]:
@@ -322,10 +346,15 @@ for rate, (p_map, p_lap) in probs.items():
         wrong_map, wrong_lap = pred_map != y_test[i], pred_lap != y_test[i]
 
         if all(w.any() and not w.all() for w in (wrong_map, wrong_lap)):
-            diffs.append(auroc(-conf_lap, wrong_lap) - auroc(-conf_map, wrong_map))
+            diffs.append(
+                auroc(-conf_lap, wrong_lap) - auroc(-conf_map, wrong_map)
+            )
 
     lo, hi = torch.stack(diffs).quantile(torch.tensor([0.05, 0.95]))
-    print(f"rate {rate:.1f}: AUROC Laplace - MAP, 90% interval [{lo:+.3f}, {hi:+.3f}]")
+    print(
+        f"rate {rate:.1f}: AUROC Laplace - MAP, 90% interval [{lo:+.3f}, "
+        f"{hi:+.3f}]"
+    )
 
 # %% [markdown]
 # At $\rho = 0$ and $0.2$, the intervals contain zero and lean negative: there,
@@ -353,7 +382,10 @@ nll = lk.objectives.predictive_nll([(x_val, y_val)])
 
 def val_nll(p):
     value = nll(p)
-    print(f"lambda = {float(p.prior.prior_precision):8.1f}   validation NLL = {float(value):.3f}")
+    print(
+        f"lambda = {float(p.prior.prior_precision):8.1f}   validation NLL = "
+        f"{float(value):.3f}"
+    )
 
     return value
 
@@ -364,7 +396,10 @@ post_val = lk.tune(post, lk.GridSearch(val_nll, values=lams))
 with torch.no_grad():
     p_val = model(**x_val).logits.softmax(-1)
 
-print(f"MAP                 validation NLL = {float(-p_val.log()[range(16), y_val].mean()):.3f}")
+print(
+    "MAP                 validation NLL = "
+    f"{float(-p_val.log()[range(16), y_val].mean()):.3f}"
+)
 
 # %% [markdown]
 # The validation NLL falls at every step up the grid, and the largest value,
@@ -387,7 +422,9 @@ ood = [
     "photosynthesis converts light into chemical energy",
 ]
 x_ood = tok(ood, return_tensors="pt", padding=True)
-x_both = tok(test_texts + ood, return_tensors="pt", padding=True)  # one call at the new lambda
+x_both = tok(
+    test_texts + ood, return_tensors="pt", padding=True
+)  # one call at the new lambda
 
 with torch.no_grad():
     p_ood = model(**x_ood).logits.softmax(-1)
@@ -396,7 +433,11 @@ p_both = lk.predict(post_val, x_both).probs
 
 results = {
     "MAP": ("-", probs[0.0][0], p_ood),
-    "marglik": (post.prior.prior_precision, probs[0.0][1], lk.predict(post, x_ood).probs),
+    "marglik": (
+        post.prior.prior_precision,
+        probs[0.0][1],
+        lk.predict(post, x_ood).probs,
+    ),
     "validation": (
         post_val.prior.prior_precision,
         p_both[: len(test_texts)],
@@ -414,7 +455,9 @@ print(f"{'':<11} {'lambda':>8} {'NLL':>6} {'acc':>6} {'AUROC':>6}")
 for name, (lam, p_test, _) in results.items():
     m = metrics(p_test, y_test)
     lam = lam if isinstance(lam, str) else f"{float(lam):.1f}"
-    print(f"{name:<11} {lam:>8} {m['NLL']:6.3f} {m['acc']:6.3f} {m['AUROC']:6.3f}")
+    print(
+        f"{name:<11} {lam:>8} {m['NLL']:6.3f} {m['acc']:6.3f} {m['AUROC']:6.3f}"
+    )
 
 # %% [markdown]
 # We add six sentences that carry no emotion at all, a small far-OOD set. For
@@ -427,11 +470,15 @@ for name, (lam, p_test, _) in results.items():
 
 # %%
 is_ood = torch.cat(
-    [torch.zeros(len(test_texts), dtype=torch.bool), torch.ones(len(ood), dtype=torch.bool)]
+    [
+        torch.zeros(len(test_texts), dtype=torch.bool),
+        torch.ones(len(ood), dtype=torch.bool),
+    ]
 )
 
 print(
-    f"{'':<11} {'H test':>7} {'H OOD':>7} {'p test':>7} {'p OOD':>7} {'AUROC p':>8} {'AUROC H':>8}"
+    f"{'':<11} {'H test':>7} {'H OOD':>7} {'p test':>7} {'p OOD':>7} "
+    f"{'AUROC p':>8} {'AUROC H':>8}"
 )
 
 for name, (_, p_test, p_far) in results.items():
@@ -440,7 +487,8 @@ for name, (_, p_test, p_far) in results.items():
     by_p = auroc(-torch.cat([max_test, max_far]), is_ood)
     by_h = auroc(torch.cat([h_test, h_far]), is_ood)
     print(
-        f"{name:<11} {h_test.mean():7.3f} {h_far.mean():7.3f} {max_test.mean():7.3f} "
+        f"{name:<11} {h_test.mean():7.3f} {h_far.mean():7.3f} "
+        f"{max_test.mean():7.3f} "
         f"{max_far.mean():7.3f} {by_p:8.3f} {by_h:8.3f}"
     )
 
@@ -448,7 +496,10 @@ for name, (_, p_test, p_far) in results.items():
 print(f"{'sentence':<52} {'MAP':>13} {'marglik':>13} {'validation':>13}")
 
 for i, text in enumerate(ood):
-    cells = [f"{classes[p[i].argmax()]:>7} {p[i].max():.2f}" for _, _, p in results.values()]
+    cells = [
+        f"{classes[p[i].argmax()]:>7} {p[i].max():.2f}"
+        for _, _, p in results.values()
+    ]
     print(f"{text:<52} {cells[0]:>13} {cells[1]:>13} {cells[2]:>13}")
 
 # %% [markdown]
@@ -545,12 +596,16 @@ facts = [
 
 def encode(statements):
     return tok(
-        [f"{s} True or false? Answer:" for s in statements], return_tensors="pt", padding=True
+        [f"{s} True or false? Answer:" for s in statements],
+        return_tensors="pt",
+        padding=True,
     )
 
 
 def labels(rows):
-    return torch.tensor([0 if true else 1 for _, true in rows])  # 0 is " True", 1 is " False"
+    return torch.tensor(
+        [0 if true else 1 for _, true in rows]
+    )  # 0 is " True", 1 is " False"
 
 
 yes_no = lk.transformers.answer_logits(tok, [" True", " False"])
@@ -564,7 +619,9 @@ tf_batches = [
 # Laplace-LoRA.
 
 # %%
-opt = torch.optim.AdamW([p for p in lm.parameters() if p.requires_grad], lr=2e-3)
+opt = torch.optim.AdamW(
+    [p for p in lm.parameters() if p.requires_grad], lr=2e-3
+)
 lm.train()
 
 for _ in range(6):
@@ -648,7 +705,10 @@ n, y_held = len(held), labels(held)
 for name, p in [("MAP", p_map), ("Laplace", p_lap)]:
     nll_held = -p[:n].log()[range(n), y_held].mean()
     acc = (p[:n].argmax(-1) == y_held).float().mean()
-    print(f"{name:<8} NLL {float(nll_held):.3f}, accuracy {float(acc):.3f} on the 16 statements")
+    print(
+        f"{name:<8} NLL {float(nll_held):.3f}, accuracy {float(acc):.3f} on "
+        "the 16 statements"
+    )
 
 # %% [markdown]
 # The MAP model gets 13 of the 16 new statements right, and is sometimes very

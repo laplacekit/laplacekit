@@ -3,31 +3,11 @@ title: "Why **laplacekit**"
 ---
 
 **laplacekit** is an extensible, modern Laplace-approximation library for
-PyTorch, built on a plugin system. Here is what that adds over `laplace-torch`,
-`laplax` and `posteriors`.
+PyTorch, built on a plugin system. Modern models like Hugging Face LLMs,
+diffusion models and reward models are supported. Here is what it adds over
+`laplace-torch`, `laplax` and `posteriors`.
 
 ## What's new?
-
-|                                    | **laplacekit** | [`laplace-torch`](https://github.com/aleximmer/Laplace) | [`laplax`](https://github.com/laplax-org/laplax) | [`posteriors`](https://github.com/normal-computing/posteriors) |
-| ---------------------------------- | :------------: | :-----------------------------------------------------: | :----------------------------------------------: | :------------------------------------------------------------: |
-| Goal: every Laplace method, on any model |       ✅       |                           ❌                            |                        ❌                        |                               ❌                               |
-| Plugin system                      |       ✅       |                           ❌                            |                        ❌                        |                               ❌                               |
-
-**Every Laplace method, on any model.** This is the goal. The alpha covers
-part of it today. `laplace-torch` has (almost) every Laplace method, in weight
-space and function space alike. Its diagonal and full curvatures run on any
-model through its `curvlinops` and `asdl` backends, but its KFAC needs a network
-made of `nn.Linear` and `nn.Conv2d`, and an LLM, a diffusion model, or a Mamba
-needs workarounds. **laplacekit** talks to the model only through autograd.
-Each method declares what it needs, and **laplacekit** checks the model
-_before_ fitting. By default, it then uses the dense GGN for small layers, KFAC
-for larger ones that module hooks reach, and a diagonal elsewhere ([Choosing a
-curvature](examples/curvature.py)). Function-space (GP) Laplace, with a subset
-of the data, shares the same interface, so both kinds of posterior work with the
-same `predict_outputs`, linearized `predict` and tuning calls ([Function
-space](examples/function_space.py)). `laplax` is JAX only. `posteriors` works on
-any PyTorch model that `torch.func` can handle, but only with diagonal and full
-curvature, and only in weight space.
 
 **Plugin system.** Think Neovim or VS Code. A new Laplace method is a package:
 install it with `pip` and pass it to `lk.laplace`. The built-in methods
@@ -64,6 +44,28 @@ curvature](plugins/curvature.py) walks through a new method.
 "planned" means on the roadmap for the first alpha. "?" means not checked yet.
 The other columns come from each library's documentation and source as of
 November 2026; corrections are welcome.
+
+## Agent workflow
+
+**laplacekit** is designed so that a coding agent can write a new Laplace
+method without reading the core:
+
+- Each extension point is a small typed interface in its own file, and `ty`
+  tells the agent it got something wrong in seconds.
+- Errors say what's missing _and_ what would work instead, so the agent can fix
+  its own mistakes. A wrong argument type, such as `hessian_approx="kron"` or
+  the class `lk.KFAC` for an instance, raises a `TypeError` that names what to
+  pass.
+- `print(post)` shows every choice a fit made, and `torch.manual_seed` (or a
+  `generator=` argument) makes reruns identical, as in torch.
+- `lk.testing` checks a new plugin against its interface and the laws it must
+  satisfy.
+- `print(lk.health())` reports whether the install works: the torch version,
+  the `curvlinops` pin, autograd on a small model, float64, and each plugin's own
+  checks.
+- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a
+  Markdown copy of every page, the API reference included, for the agent to
+  read.
 
 ## Coming from `laplace-torch`
 

@@ -5,9 +5,18 @@
 # ---
 #
 # A GP on a subset of the data throws the other points away. The methods in
-# `lk.gp` (the `laplacekit-gp` plugin, installed with the `gp` extra) use all
-# of them and stay cheap. We use the sine data and the network of the
+# `lk.gp` use all of them and stay cheap. We use the sine data and the network of the
 # [regression page](regression.py).
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-gp`](https://github.com/laplacekit/laplacekit/tree/main/plugins/gp)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[gp]"
+# ```
+# :::
 
 # %%
 import matplotlib.pyplot as plt
@@ -76,7 +85,9 @@ t = x_test.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+)
 ax.legend()
 plt.show()
 
@@ -130,8 +141,17 @@ z = gp.inducing.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
-ax.plot(z, torch.full_like(z, -2.0), "|", color="k", markersize=12, label="inducing inputs")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+)
+ax.plot(
+    z,
+    torch.full_like(z, -2.0),
+    "|",
+    color="k",
+    markersize=12,
+    label="inducing inputs",
+)
 ax.legend(loc="lower right")
 plt.show()
 
@@ -160,9 +180,13 @@ x_test = torch.linspace(-2.0, 2.0, 201).reshape(-1, 1)
 # %%
 prior = lk.gp.FunctionPrior(lk.gp.RBF(torch.tensor(0.3)))
 lik = lk.Gaussian(sigma=0.1)
-context = lk.gp.uniform(-2.0, 2.0, 100, generator=torch.Generator().manual_seed(0))
+context = lk.gp.uniform(
+    -2.0, 2.0, 100, generator=torch.Generator().manual_seed(0)
+)
 
-net = nn.Sequential(nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 50), nn.Tanh(), nn.Linear(50, 1))
+net = nn.Sequential(
+    nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 50), nn.Tanh(), nn.Linear(50, 1)
+)
 opt = torch.optim.Adam(net.parameters(), lr=1e-2)
 
 for _ in range(5000):
@@ -197,7 +221,9 @@ t = x_test.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+)
 ax.legend(loc="lower right")
 plt.show()
 

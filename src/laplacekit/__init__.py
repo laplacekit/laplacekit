@@ -1,4 +1,9 @@
-"""Laplace approximations for PyTorch."""
+"""Laplace approximations for PyTorch.
+
+Docs are at https://laplacekit.org. Coding agents can read
+https://laplacekit.org/llms.txt, an index of Markdown copies of every page,
+the API reference included.
+"""
 
 import importlib
 from types import ModuleType

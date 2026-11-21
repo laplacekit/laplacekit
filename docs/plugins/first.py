@@ -25,7 +25,9 @@ from pathlib import Path
 import laplacekit_example
 
 code = Path(laplacekit_example.__file__).read_text()
-print(f'```{{.python filename="src/laplacekit_example/__init__.py"}}\n{code}```')
+print(
+    f'```{{.python filename="src/laplacekit_example/__init__.py"}}\n{code}```'
+)
 
 # %% [markdown]
 # A subset is called after the probe has run the model on the first batch, and
@@ -51,11 +53,15 @@ from torch import nn
 
 import laplacekit as lk
 
-x_np, y_np = make_blobs(n_samples=400, centers=4, cluster_std=1.2, random_state=0)
+x_np, y_np = make_blobs(
+    n_samples=400, centers=4, cluster_std=1.2, random_state=0
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 16), nn.Tanh(), nn.Linear(16, 16), nn.Tanh(), nn.Linear(16, 4))
+model = nn.Sequential(
+    nn.Linear(2, 16), nn.Tanh(), nn.Linear(16, 16), nn.Tanh(), nn.Linear(16, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 for _ in range(300):
@@ -63,7 +69,9 @@ for _ in range(300):
     nn.functional.cross_entropy(model(x), y).backward()
     opt.step()
 
-post = lk.laplace(model, [(x, y)], likelihood=lk.Categorical(), subset=last_layers(2))
+post = lk.laplace(
+    model, [(x, y)], likelihood=lk.Categorical(), subset=last_layers(2)
+)
 print(post)
 
 # %% [markdown]

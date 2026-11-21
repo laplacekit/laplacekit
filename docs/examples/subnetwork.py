@@ -90,7 +90,9 @@ x_test = torch.linspace(-5.0, 5.0, 400).reshape(-1, 1)
 y_test = torch.sin(x_test) + 0.1 * torch.randn_like(x_test)
 data = [(x, y)]
 
-model = nn.Sequential(nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 50), nn.Tanh(), nn.Linear(50, 1))
+model = nn.Sequential(
+    nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 50), nn.Tanh(), nn.Linear(50, 1)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 sigma, lam = 0.1, 1.0
 
@@ -193,7 +195,10 @@ for name, post in posts.items():
 
 # %%
 posteriors = {"full, all": full, "diagonal, all": diag} | posts
-preds = {name: lk.predict(posterior, x_test) for name, posterior in posteriors.items()}
+preds = {
+    name: lk.predict(posterior, x_test)
+    for name, posterior in posteriors.items()
+}
 
 t = x_test.squeeze()
 ref = preds["full, all"]
@@ -208,7 +213,12 @@ for ax, (name, p) in zip(axes.flat, preds.items(), strict=True):
 
     if p is not ref:
         for sign in (-1, 1):
-            ax.plot(t, ref.mean.squeeze() + sign * 2 * ref.stddev.squeeze(), "k--", lw=0.8)
+            ax.plot(
+                t,
+                ref.mean.squeeze() + sign * 2 * ref.stddev.squeeze(),
+                "k--",
+                lw=0.8,
+            )
 
 axes[0, 0].set_ylim(-3, 3)
 plt.show()
@@ -229,15 +239,18 @@ for name, p in preds.items():
     nll = -p.log_prob(y_test).squeeze()
     std = p.stddev.squeeze()[gap].mean()
     print(
-        f"{name:14} log Z {posteriors[name].log_marglik():8.1f}   NLL {nll.mean():6.3f}"
+        f"{name:14} log Z {posteriors[name].log_marglik():8.1f}   NLL "
+        f"{nll.mean():6.3f}"
         f"   in gap: NLL {nll[gap].mean():6.3f}, std {std:.3f}"
     )
 
 p = lk.predict(fixed, x_test)
 nll = -p.log_prob(y_test).squeeze()
 print(
-    f"{'last, lam = 1':14} log Z {fixed.log_marglik():8.1f}   NLL {nll.mean():6.3f}"
-    f"   in gap: NLL {nll[gap].mean():6.3f}, std {p.stddev.squeeze()[gap].mean():.3f}"
+    f"{'last, lam = 1':14} log Z {fixed.log_marglik():8.1f}   NLL "
+    f"{nll.mean():6.3f}"
+    f"   in gap: NLL {nll[gap].mean():6.3f}, std "
+    f"{p.stddev.squeeze()[gap].mean():.3f}"
 )
 
 # %% [markdown]
@@ -274,7 +287,10 @@ print(
 var = torch.cat([v.flatten() for v in diag.variance.values()])
 f_std = lk.predict_outputs(posts["variance"], x_test).cov.diagonal().sqrt()
 
-print("smallest diagonal variance among those picked:", f"{var.topk(n).values.min():.4f}")
+print(
+    "smallest diagonal variance among those picked:",
+    f"{var.topk(n).values.min():.4f}",
+)
 print("largest std of f under the variance choice:   ", f"{f_std.max():.4f}")
 
 # %% [markdown]
@@ -330,7 +346,11 @@ print("largest std of f under the variance choice:   ", f"{f_std.max():.4f}")
 
 # %%
 swag = lk.subnet.swag_variance(
-    model, data, likelihood=lik, n_snapshots=10, generator=torch.Generator().manual_seed(0)
+    model,
+    data,
+    likelihood=lik,
+    n_snapshots=10,
+    generator=torch.Generator().manual_seed(0),
 )
 by_swag = lk.laplace(
     model,
@@ -346,7 +366,8 @@ p = lk.predict(by_swag, x_test)
 nll = -p.log_prob(y_test).squeeze()
 print(
     f"{'SWAG':14} log Z {by_swag.log_marglik():8.1f}   NLL {nll.mean():6.3f}"
-    f"   in gap: NLL {nll[gap].mean():6.3f}, std {p.stddev.squeeze()[gap].mean():.3f}"
+    f"   in gap: NLL {nll[gap].mean():6.3f}, std "
+    f"{p.stddev.squeeze()[gap].mean():.3f}"
 )
 
 # %% [markdown]

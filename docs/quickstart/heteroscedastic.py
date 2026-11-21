@@ -7,6 +7,16 @@
 # When the noise changes with the input, the network should predict it too. Our
 # data are a sine with noise that grows away from the origin, and a gap in the
 # middle with no data at all.
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-heteroscedastic`](https://github.com/laplacekit/laplacekit/tree/main/plugins/heteroscedastic)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[heteroscedastic]"
+# ```
+# :::
 
 # %%
 import matplotlib.pyplot as plt
@@ -52,7 +62,11 @@ for _ in range(1000):
 
 # %%
 post = lk.laplace(
-    model, [(x, y)], likelihood=lik, subset=lk.subsets.all, hessian_approx=lk.DenseGGN()
+    model,
+    [(x, y)],
+    likelihood=lik,
+    subset=lk.subsets.all,
+    hessian_approx=lk.DenseGGN(),
 )
 print(post)
 
@@ -64,7 +78,9 @@ print(post)
 
 # %%
 pred = lk.predict(post, x_test)
-parts = lk.heteroscedastic.moments(post.likelihood, lk.predict_outputs(post, x_test))
+parts = lk.heteroscedastic.moments(
+    post.likelihood, lk.predict_outputs(post, x_test)
+)
 
 mean = pred.mean.squeeze()
 epistemic = parts.epistemic.sqrt().squeeze()
@@ -74,7 +90,8 @@ for at in [0.0, 1.0, 3.0, 4.0]:
     i = int((x_test.squeeze() - at).abs().argmin())
     print(
         f"x = {at}: noise std {float(parts.aleatoric[i].sqrt()):.3f} "
-        f"(true {0.05 + 0.15 * at:.3f}), epistemic std {float(epistemic[i]):.3f}"
+        f"(true {0.05 + 0.15 * at:.3f}), epistemic std "
+        f"{float(epistemic[i]):.3f}"
     )
 
 # %%
@@ -84,7 +101,9 @@ fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
 ax.fill_between(t, mean - 2 * total, mean + 2 * total, alpha=0.2, label="total")
-ax.fill_between(t, mean - 2 * epistemic, mean + 2 * epistemic, alpha=0.4, label="epistemic")
+ax.fill_between(
+    t, mean - 2 * epistemic, mean + 2 * epistemic, alpha=0.4, label="epistemic"
+)
 ax.set_title("mean ± 2 std")
 ax.set_ylim(-3, 3)
 ax.legend()

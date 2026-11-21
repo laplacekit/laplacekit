@@ -62,7 +62,9 @@ import laplacekit.core as core
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(0)
 
-x_np, y_np = make_blobs(n_samples=400, centers=4, cluster_std=1.5, random_state=3)
+x_np, y_np = make_blobs(
+    n_samples=400, centers=4, cluster_std=1.5, random_state=3
+)
 x = torch.tensor(x_np)
 y = torch.tensor(y_np)
 loader = list(zip(x.split(100), y.split(100), strict=True))
@@ -107,11 +109,16 @@ class HutchinsonDiag:
 
     @property
     def requires(self) -> lk.core.Requirements:
-        return lk.core.Requirements(vjp=True, vmap=True, needs_output_hessian=True)
+        return lk.core.Requirements(
+            vjp=True, vmap=True, needs_output_hessian=True
+        )
 
     def init(self, params, ctx):
         like = next(iter(params.values()))
-        sums = {b: torch.zeros(ctx.layout.size(b), dtype=like.dtype) for b in ctx.layout.blocks}
+        sums = {
+            b: torch.zeros(ctx.layout.size(b), dtype=like.dtype)
+            for b in ctx.layout.blocks
+        }
 
         return core.SumStat(sums, torch.zeros((), dtype=like.dtype))
 
@@ -119,7 +126,9 @@ class HutchinsonDiag:
         p = dict(params)
         f = ctx.model(p, batch.inputs)
         w = torch.ones(batch.size) if batch.weights is None else batch.weights
-        signs = torch.randint(0, 2, (self.n_probes, *f.shape), generator=generator)
+        signs = torch.randint(
+            0, 2, (self.n_probes, *f.shape), generator=generator
+        )
         hess = core.output_hessian(ctx.likelihood, f, generator=generator)
 
         def pullback(x, ct):
@@ -133,13 +142,19 @@ class HutchinsonDiag:
             g = vmap(pullback)(batch.inputs, hess.sqrt_mv(z))
 
             for b, names in ctx.layout.blocks.items():
-                flat = torch.cat([g[n].reshape(batch.size, -1) for n in names], dim=1)
-                sums[b] = sums[b] + (w[:, None] * flat**2).sum(0) / self.n_probes
+                flat = torch.cat(
+                    [g[n].reshape(batch.size, -1) for n in names], dim=1
+                )
+                sums[b] = (
+                    sums[b] + (w[:, None] * flat**2).sum(0) / self.n_probes
+                )
 
         return core.SumStat(sums, stat.weight + w.sum())
 
     def finalize(self, stat):
-        return core.BlockDiag({b: core.Diag(s / stat.weight) for b, s in stat.sum.items()})
+        return core.BlockDiag(
+            {b: core.Diag(s / stat.weight) for b, s in stat.sum.items()}
+        )
 
 
 # %% [markdown]

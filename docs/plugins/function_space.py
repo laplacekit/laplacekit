@@ -68,13 +68,15 @@ class Sum:
 
 @lk.core.pytree
 class Cross:
-    """One pass: the average of K_Zn H_n K_nZ over the data, with K_nZ = J_n Σ₀ J_Zᵀ."""
+    """One pass: the data average of K_Zn H_n K_nZ, with K_nZ = J_n Σ₀ J_Zᵀ."""
 
     rows: Tensor  # Σ₀ J_Zᵀ, as [m E, P] rows
 
     @property
     def requires(self) -> Requirements:
-        return Requirements(vjp=True, vmap=True, needs_output_hessian=True, weights=False)
+        return Requirements(
+            vjp=True, vmap=True, needs_output_hessian=True, weights=False
+        )
 
     def init(self, params, ctx, /) -> Sum:
         k = self.rows.shape[0]
@@ -85,12 +87,19 @@ class Cross:
         f = ctx.model(params, batch.inputs)
         n = f.shape[0]
 
-        k_nz = fs.jacobian(ctx.model, params, batch.inputs, self.rows.dtype) @ self.rows.T
-        hess = output_hessian(ctx.likelihood, f, generator=generator, inputs=batch.inputs)
+        k_nz = (
+            fs.jacobian(ctx.model, params, batch.inputs, self.rows.dtype)
+            @ self.rows.T
+        )
+        hess = output_hessian(
+            ctx.likelihood, f, generator=generator, inputs=batch.inputs
+        )
 
         # H_n applied to each column of K_nZ, one `mv` per column under vmap
         cols = k_nz.reshape(*f.shape, -1).to(f.dtype)
-        h_k = torch.vmap(hess.mv, in_dims=-1, out_dims=-1)(cols).reshape(k_nz.shape)
+        h_k = torch.vmap(hess.mv, in_dims=-1, out_dims=-1)(cols).reshape(
+            k_nz.shape
+        )
 
         return Sum(stat.gram + k_nz.T @ h_k.to(k_nz.dtype), stat.count + n)
 
@@ -130,13 +139,16 @@ class InducingGP:
             fs.cov_rows(self.prior, self.mean, j).reshape(n, e, -1),
         )
 
-        # Whitened by L, the Cholesky factor of K_ZZ: V = L⁻¹ K_Zx and W = L⁻¹ (s c S) L⁻ᵀ.
+        # Whitened by L, the Cholesky factor of K_ZZ:
+        # V = L⁻¹ K_Zx and W = L⁻¹ (s c S) L⁻ᵀ.
         # Then K_xZ K_ZZ⁻¹ K_Zx - K_xZ (K_ZZ + s c S)⁻¹ K_Zx = Vᵀ (I + W)⁻¹ W V.
         # 1 / σ² for a lk.Gaussian, None if the likelihood has none.
         c = curvature_scale(self.likelihood)
         weight = self.n_data * (1.0 if c is None else c)
         eye = torch.eye(len(self.k_zz), dtype=self.k_zz.dtype)
-        chol = torch.linalg.cholesky(self.k_zz + 1e-10 * eye)  # jitter: K_ZZ can be near singular
+        chol = torch.linalg.cholesky(
+            self.k_zz + 1e-10 * eye
+        )  # jitter: K_ZZ can be near singular
 
         def whiten(m: Tensor) -> Tensor:
             return torch.linalg.solve_triangular(chol, m, upper=False)
@@ -146,7 +158,9 @@ class InducingGP:
         u = torch.linalg.solve(eye + w, w @ v)
 
         k = len(eye)
-        cov = k_xx - torch.einsum("kne,knf->nef", v.reshape(k, n, e), u.reshape(k, n, e))
+        cov = k_xx - torch.einsum(
+            "kne,knf->nef", v.reshape(k, n, e), u.reshape(k, n, e)
+        )
 
         return lk.core.OutputGaussian(
             f, lk.core.PerInputCov(0.5 * (cov + cov.mT), tuple(f.shape[1:]))
@@ -161,7 +175,9 @@ class Inducing:
 
     @property
     def requires(self) -> Requirements:
-        return Requirements(vjp=True, vmap=True, needs_output_hessian=True, weights=False)
+        return Requirements(
+            vjp=True, vmap=True, needs_output_hessian=True, weights=False
+        )
 
     def plan(self, params, ctx, prior, /):
         dtype = stat_dtype(next(iter(params.values())).dtype)
@@ -211,7 +227,9 @@ for _ in range(1000):
 lik = lk.Gaussian(sigma=0.3)
 z = torch.linspace(0.0, 8.0, 10).reshape(-1, 1)
 
-gp = fs.laplace(model, [(x, y)], likelihood=lik, method=Inducing(z), subset=lk.subsets.all)
+gp = fs.laplace(
+    model, [(x, y)], likelihood=lik, method=Inducing(z), subset=lk.subsets.all
+)
 full = lk.laplace(
     model,
     [(x, y)],
@@ -235,13 +253,22 @@ mean, std = dtc.mean.squeeze(), dtc.stddev.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="DTC, mean ± 2 std")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="DTC, mean ± 2 std"
+)
 
 for sign in (-1, 1):
     band = ref.mean.squeeze() + sign * 2 * ref.stddev.squeeze()
     ax.plot(t, band, "k--", lw=0.8, label="full GGN" if sign > 0 else None)
 
-ax.plot(z.squeeze(), torch.full((10,), -3.5), "|", color="k", markersize=12, label="Z")
+ax.plot(
+    z.squeeze(),
+    torch.full((10,), -3.5),
+    "|",
+    color="k",
+    markersize=12,
+    label="Z",
+)
 ax.set_ylim(-4.5, 4.0)
 ax.legend(loc="upper center", ncols=3, fontsize="small")
 plt.show()
@@ -327,19 +354,31 @@ def test_inducing():
     x_s, y_s = x[:5], y[:5]
     fit = dict(likelihood=lik, subset=lk.subsets.all)
 
-    # The monoid law, through the front door: one batch or two give the same statistic.
+    # The monoid law, through the front door: one batch or two give the same
+    # statistic.
     one = fs.laplace(model, [(x_s, y_s)], method=Inducing(z), **fit)
-    two = fs.laplace(model, [(x_s[:2], y_s[:2]), (x_s[2:], y_s[2:])], method=Inducing(z), **fit)
+    two = fs.laplace(
+        model,
+        [(x_s[:2], y_s[:2]), (x_s[2:], y_s[2:])],
+        method=Inducing(z),
+        **fit,
+    )
     torch.testing.assert_close(two.gram, one.gram)
     torch.testing.assert_close(two.n_data, one.n_data)
 
-    # With Z the training inputs, DTC is the exact GP: the dense GGN's predictive.
+    # With Z the training inputs, DTC is the exact GP: the dense GGN's
+    # predictive.
     dtc = fs.laplace(model, [(x_s, y_s)], method=Inducing(x_s), **fit)
     ref = lk.laplace(
-        model, [(x_s, y_s)], hessian_approx=lk.DenseGGN(joint=True), hyper_tuner=None, **fit
+        model,
+        [(x_s, y_s)],
+        hessian_approx=lk.DenseGGN(joint=True),
+        hyper_tuner=None,
+        **fit,
     )
     torch.testing.assert_close(
-        dtc.at(x_test).cov.diagonal(), lk.predict_outputs(ref, x_test).cov.diagonal()
+        dtc.at(x_test).cov.diagonal(),
+        lk.predict_outputs(ref, x_test).cov.diagonal(),
     )
 
     lk.testing.check_predictive(lk.Linearized(), dtc, x_test[:7])

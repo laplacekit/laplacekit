@@ -35,7 +35,10 @@ for _ in range(1000):
 
 # %%
 post = lk.laplace(
-    model, [(x, y)], likelihood=lk.Gaussian(), generator=torch.Generator().manual_seed(0)
+    model,
+    [(x, y)],
+    likelihood=lk.Gaussian(),
+    generator=torch.Generator().manual_seed(0),
 )
 print("sigma:", float(post.likelihood.sigma))
 
@@ -48,7 +51,9 @@ t = x_test.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+)
 ax.legend()
 plt.show()
 
@@ -89,7 +94,10 @@ std2 = lk.predict(post2, x_test).stddev
 
 inside = (x_test.squeeze() >= 0) & (x_test.squeeze() <= 8)
 print("sigma:", post2.likelihood.sigma.tolist())
-print("predictive std on [0, 8]:", [round(v, 3) for v in std2[inside].mean(0).tolist()])
+print(
+    "predictive std on [0, 8]:",
+    [round(v, 3) for v in std2[inside].mean(0).tolist()],
+)
 print("predictive std at x = 10:", [round(v, 3) for v in std2[-1].tolist()])
 
 # %% [markdown]

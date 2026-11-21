@@ -36,7 +36,9 @@ u = torch.sin(2 * x).squeeze(-1)  # hidden utility of each item
 y = torch.bernoulli(torch.sigmoid(3 * (u[:, 0] - u[:, 1])))
 loader = list(zip(x.split(100), y.split(100), strict=True))
 
-scorer = nn.Sequential(nn.Linear(1, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 1))
+scorer = nn.Sequential(
+    nn.Linear(1, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 1)
+)
 model = nn.Sequential(scorer, nn.Flatten())  # [N, 2, 1] -> [N, 2] scores
 opt = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=1e-4)
 
@@ -53,7 +55,9 @@ for _ in range(500):
 
 # %%
 def bradley_terry(f, y):
-    return -F.binary_cross_entropy_with_logits(f[:, 0] - f[:, 1], y, reduction="none")
+    return -F.binary_cross_entropy_with_logits(
+        f[:, 0] - f[:, 1], y, reduction="none"
+    )
 
 
 lik = lk.likelihoods.from_log_prob(bradley_terry)
@@ -67,7 +71,9 @@ print(post)
 
 # %%
 t = torch.linspace(-6, 6, 300)
-grid = torch.stack([t, torch.zeros_like(t)], dim=1).unsqueeze(-1)  # pairs (x, 0)
+grid = torch.stack([t, torch.zeros_like(t)], dim=1).unsqueeze(
+    -1
+)  # pairs (x, 0)
 
 try:
     lk.predict(post, grid)
@@ -77,7 +83,9 @@ except lk.CapabilityError as e:
 out = lk.predict_outputs(post, grid)
 v = out.cov.per_input()  # [N, 2, 2]
 var = v[:, 0, 0] + v[:, 1, 1] - 2 * v[:, 0, 1]
-p_lap = torch.sigmoid((out.mean[:, 0] - out.mean[:, 1]) / torch.sqrt(1 + math.pi / 8 * var))
+p_lap = torch.sigmoid(
+    (out.mean[:, 0] - out.mean[:, 1]) / torch.sqrt(1 + math.pi / 8 * var)
+)
 
 with torch.no_grad():
     f_map = model(grid)

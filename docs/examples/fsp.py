@@ -159,17 +159,25 @@ lik = lk.Gaussian(sigma=0.1)
 def train(prior=None):
     torch.manual_seed(1)
     model = nn.Sequential(
-        nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 50), nn.Tanh(), nn.Linear(50, 1)
+        nn.Linear(1, 50),
+        nn.Tanh(),
+        nn.Linear(50, 50),
+        nn.Tanh(),
+        nn.Linear(50, 1),
     )
     opt = torch.optim.Adam(model.parameters(), lr=1e-2)
-    context = lk.gp.uniform(-2.0, 2.0, 100, generator=torch.Generator().manual_seed(0))
+    context = lk.gp.uniform(
+        -2.0, 2.0, 100, generator=torch.Generator().manual_seed(0)
+    )
 
     for _ in range(5000):
         opt.zero_grad()
         loss = -lik.log_prob(model(x), y).sum()
 
         if prior is None:
-            loss = loss + 0.5 * sum(p.square().sum() for p in model.parameters())
+            loss = loss + 0.5 * sum(
+                p.square().sum() for p in model.parameters()
+            )
         else:
             c = context.draw()
             loss = loss + 0.5 * lk.gp.rkhs_norm(prior, c, model(c))
@@ -184,7 +192,9 @@ priors = {
     "RBF": lk.gp.FunctionPrior(lk.gp.RBF(torch.tensor(0.3))),
     "Matérn-½": lk.gp.FunctionPrior(lk.gp.Matern("1/2", torch.tensor(0.5))),
 }
-nets = {"weights": train()} | {name: train(prior) for name, prior in priors.items()}
+nets = {"weights": train()} | {
+    name: train(prior) for name, prior in priors.items()
+}
 
 # %% [markdown]
 # Before the posteriors, a look at the norm estimate. We evaluate it for the
@@ -198,7 +208,9 @@ with torch.no_grad():
 
         for n in (9, 17, 33, 65, 129, 257):
             c = lk.gp.grid(-2.0, 2.0, n).draw()
-            norms.append(round(float(lk.gp.rkhs_norm(prior, c, nets[name](c))), 2))
+            norms.append(
+                round(float(lk.gp.rkhs_norm(prior, c, nets[name](c))), 2)
+            )
 
         print(f"{name:<9} RKHS norm estimate:", norms)
 
@@ -251,9 +263,13 @@ for name, prior in priors.items():
     posteriors[f"FSP, {name}"] = post
     evals = post.prior_evals
     print(post)
-    print(f"  prior precision in the basis: {evals.min():.1e} to {evals.max():.1e}")
+    print(
+        f"  prior precision in the basis: {evals.min():.1e} to "
+        f"{evals.max():.1e}"
+    )
 
-    # A = D_M^2 + U_M^T G U_M; the Gaussian likelihood scales the GGN by 1/sigma^2.
+    # A = D_M^2 + U_M^T G U_M; the Gaussian likelihood scales the GGN by
+    # 1/sigma^2.
     a = torch.diag(evals) + post.n_data * post.gram / lik.sigma.double() ** 2
     d = torch.linalg.eigvalsh((a + a.mT) / 2)
     small = int((d <= torch.finfo(d.dtype).eps * len(d) * d.max()).sum())
@@ -278,14 +294,21 @@ for name, prior in priors.items():
 
 # %%
 t = x_test.squeeze()
-preds = {name: lk.predict(posterior, x_test) for name, posterior in posteriors.items()}
+preds = {
+    name: lk.predict(posterior, x_test)
+    for name, posterior in posteriors.items()
+}
 fig, axes = plt.subplots(1, 3, figsize=(12, 3.5), sharey=True)
 
 for ax, (name, pred) in zip(axes, preds.items(), strict=True):
     mean, std = pred.mean.squeeze(), pred.stddev.squeeze()
-    ax.plot(t, torch.sin(2 * torch.pi * t), "k--", linewidth=1, label="sin(2πx)")
+    ax.plot(
+        t, torch.sin(2 * torch.pi * t), "k--", linewidth=1, label="sin(2πx)"
+    )
     ax.plot(t, mean, label="mean")
-    ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
+    ax.fill_between(
+        t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+    )
     ax.scatter(x.squeeze(), y.squeeze(), s=6, color="0.4")
     ax.set_title(name)
     ax.set_ylim(-5.0, 5.0)
@@ -297,7 +320,8 @@ for name, pred in preds.items():
     mean, std = pred.mean.squeeze(), pred.stddev.squeeze()
     at = [0, 100, 200]
     print(
-        f"{name:<15} mean at x = -2, 0, 2: {[round(float(mean[i]), 2) for i in at]}",
+        f"{name:<15} mean at x = -2, 0, 2: "
+        f"{[round(float(mean[i]), 2) for i in at]}",
         f" std: {[round(float(std[i]), 2) for i in at]}",
     )
 
@@ -331,7 +355,10 @@ print(f"{'':<15}" + "".join(f"{r:>9}" for r in region))
 
 for name, pred in preds.items():
     nll = -pred.log_prob(y_test).squeeze()
-    print(f"{name:<15}" + "".join(f"{nll[m].mean():>9.3f}" for m in region.values()))
+    print(
+        f"{name:<15}"
+        + "".join(f"{nll[m].mean():>9.3f}" for m in region.values())
+    )
 
 # %% [markdown]
 # On the data, the three are close, and the Matérn-½ posterior is a bit

@@ -106,7 +106,9 @@ def train(inputs, targets, prior):
 
     def closure():
         opt.zero_grad()
-        loss = ((targets - model(inputs)) ** 2).sum() / (2 * 0.3**2) - prior.log_prob(last)
+        loss = ((targets - model(inputs)) ** 2).sum() / (
+            2 * 0.3**2
+        ) - prior.log_prob(last)
         loss.backward()
         return loss
 
@@ -128,7 +130,9 @@ post_2 = lk.laplace(model, d2, likelihood=lik, prior=post_1, hyper_tuner=None)
 
 # %%
 train(x, y, prior)
-batch = lk.laplace(model, [(x, y)], likelihood=lik, prior=prior, hyper_tuner=None)
+batch = lk.laplace(
+    model, [(x, y)], likelihood=lik, prior=prior, hyper_tuner=None
+)
 
 # %% [markdown]
 # ## Continual against batch
@@ -142,11 +146,17 @@ t = x_test.squeeze()
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
 
 for ax, posterior, name, part in zip(
-    axes, [post_1, post_2], ["after D1", "after D1, then D2"], [left, ~left], strict=True
+    axes,
+    [post_1, post_2],
+    ["after D1", "after D1, then D2"],
+    [left, ~left],
+    strict=True,
 ):
     p = lk.predict(posterior, x_test)
     m, s = p.mean.squeeze(), p.stddev.squeeze()
-    ax.scatter(x[part].squeeze(), y[part].squeeze(), s=8, color="0.5", label="new data")
+    ax.scatter(
+        x[part].squeeze(), y[part].squeeze(), s=8, color="0.5", label="new data"
+    )
     ax.plot(t, m, label="mean")
     ax.fill_between(t, m - 2 * s, m + 2 * s, alpha=0.3, label="mean ± 2 std")
     ax.set_title(name)
@@ -154,13 +164,17 @@ for ax, posterior, name, part in zip(
 b = lk.predict(batch, x_test)
 
 for sign in (-1, 1):
-    axes[1].plot(t, b.mean.squeeze() + sign * 2 * b.stddev.squeeze(), "k--", lw=1)
+    axes[1].plot(
+        t, b.mean.squeeze() + sign * 2 * b.stddev.squeeze(), "k--", lw=1
+    )
 
 axes[1].plot([], [], "k--", lw=1, label="batch fit ± 2 std")
 axes[1].legend()
 plt.show()
 
-gap = max(float((post_2.mean[k] - batch.mean[k]).abs().max()) for k in batch.mean)
+gap = max(
+    float((post_2.mean[k] - batch.mean[k]).abs().max()) for k in batch.mean
+)
 cov_gap = (
     lk.predict_outputs(post_2, x_test).cov.per_input()
     - lk.predict_outputs(batch, x_test).cov.per_input()
@@ -214,7 +228,12 @@ std_dense = lk.predict(post_2, x_test).stddev
 
 train(*d1[0], prior)
 kfac_1 = lk.laplace(
-    model, d1, likelihood=lik, prior=prior, hessian_approx=lk.KFAC(), hyper_tuner=None
+    model,
+    d1,
+    likelihood=lik,
+    prior=prior,
+    hessian_approx=lk.KFAC(),
+    hyper_tuner=None,
 )
 
 train(*d2[0], lk.priors.KronSum.of(kfac_1))
@@ -263,9 +282,13 @@ all_2 = lk.laplace(model, d2, prior=lk.priors.KronSum.of(all_1), **every)
 alone_2 = lk.laplace(model, d2, prior=prior, **every)
 
 for name, layer in [("0", "hidden"), ("2", "last")]:
-    first, alone, summed = (block(post, name) for post in (all_1, alone_2, all_2))
+    first, alone, summed = (
+        block(post, name) for post in (all_1, alone_2, all_2)
+    )
     exact = first + alone - prior.prior_precision * torch.eye(len(first))
-    err = torch.linalg.matrix_norm(summed - exact) / torch.linalg.matrix_norm(exact)
+    err = torch.linalg.matrix_norm(summed - exact) / torch.linalg.matrix_norm(
+        exact
+    )
 
     print(f"{layer} layer: relative error of KronSum {err:.2g}")
 

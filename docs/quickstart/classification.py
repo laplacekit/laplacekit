@@ -18,7 +18,11 @@ from torch import nn
 import laplacekit as lk
 
 x_np, y_np = make_blobs(
-    n_samples=500, centers=4, cluster_std=1.2, center_box=(-10, 10), random_state=37
+    n_samples=500,
+    centers=4,
+    cluster_std=1.2,
+    center_box=(-10, 10),
+    random_state=37,
 )
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
@@ -32,7 +36,9 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(20, 4, bias=False),
 )
-opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+opt = torch.optim.SGD(
+    model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4
+)
 
 for _ in range(5000):
     opt.zero_grad()
@@ -54,7 +60,9 @@ post = lk.laplace(
 )
 print(post)
 
-tuned = lk.laplace(model, [(x, y)], likelihood=lk.Categorical())  # the default, for comparison
+tuned = lk.laplace(
+    model, [(x, y)], likelihood=lk.Categorical()
+)  # the default, for comparison
 print("tuned prior precision:", float(tuned.prior.prior_precision))
 
 # %% [markdown]
@@ -64,7 +72,9 @@ print("tuned prior precision:", float(tuned.prior.prior_precision))
 # %%
 lin = np.linspace(-15, 15, 50)
 gx, gy = np.meshgrid(lin, lin)
-grid = torch.tensor(np.stack([gx.ravel(), gy.ravel()], axis=1), dtype=torch.float32)
+grid = torch.tensor(
+    np.stack([gx.ravel(), gy.ravel()], axis=1), dtype=torch.float32
+)
 
 with torch.no_grad():
     conf_map = model(grid).softmax(-1).max(-1).values
@@ -73,9 +83,25 @@ conf_lap = lk.predict(post, grid).probs.max(-1).values
 
 fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharey=True)
 
-for ax, conf, name in zip(axes, [conf_map, conf_lap], ["MAP", "Laplace"], strict=True):
-    im = ax.contourf(gx, gy, conf.reshape(gx.shape), levels=np.arange(0.3, 1.01, 0.1), cmap="Blues")
-    ax.scatter(x_np[:, 0], x_np[:, 1], c=y_np, cmap="Set2", edgecolors="k", linewidths=0.5, s=12)
+for ax, conf, name in zip(
+    axes, [conf_map, conf_lap], ["MAP", "Laplace"], strict=True
+):
+    im = ax.contourf(
+        gx,
+        gy,
+        conf.reshape(gx.shape),
+        levels=np.arange(0.3, 1.01, 0.1),
+        cmap="Blues",
+    )
+    ax.scatter(
+        x_np[:, 0],
+        x_np[:, 1],
+        c=y_np,
+        cmap="Set2",
+        edgecolors="k",
+        linewidths=0.5,
+        s=12,
+    )
     ax.set_title(name)
     ax.set_aspect("equal")
 
@@ -112,9 +138,15 @@ plt.show()
 
 # %%
 _, _, centers = make_blobs(
-    n_samples=500, centers=4, center_box=(-10, 10), random_state=37, return_centers=True
+    n_samples=500,
+    centers=4,
+    center_box=(-10, 10),
+    random_state=37,
+    return_centers=True,
 )
-xv_np, yv_np = make_blobs(n_samples=200, centers=centers, cluster_std=1.2, random_state=1)
+xv_np, yv_np = make_blobs(
+    n_samples=200, centers=centers, cluster_std=1.2, random_state=1
+)
 val = [(torch.tensor(xv_np, dtype=torch.float32), torch.tensor(yv_np))]
 
 ece, brier = lk.objectives.ece(val), lk.objectives.brier(val)
@@ -131,7 +163,8 @@ for name, p in [
     ("tune on Brier", by_brier),
 ]:
     print(
-        f"{name:<16} {float(p.prior.prior_precision):8.3g} {float(ece(p)):6.3f} {float(brier(p)):6.3f}"
+        f"{name:<16} {float(p.prior.prior_precision):8.3g} "
+        f"{float(ece(p)):6.3f} {float(brier(p)):6.3f}"
     )
 
 # %% [markdown]
@@ -151,19 +184,35 @@ for name, p in [
 # to `lk.Linearized`.
 
 # %%
-bridge = lk.predict(post, grid, lk.Linearized(link=lk.Bridge())).probs.max(-1).values
-normed = lk.predict(post, grid, lk.Linearized(link=lk.Bridge(normalized=True))).probs.max(-1).values
+bridge = (
+    lk.predict(post, grid, lk.Linearized(link=lk.Bridge())).probs.max(-1).values
+)
+normed = (
+    lk.predict(post, grid, lk.Linearized(link=lk.Bridge(normalized=True)))
+    .probs.max(-1)
+    .values
+)
 
-links = {"MAP": conf_map, "probit": conf_lap, "bridge": bridge, "normalized": normed}
+links = {
+    "MAP": conf_map,
+    "probit": conf_lap,
+    "bridge": bridge,
+    "normalized": normed,
+}
 
 for name, conf in links.items():
     print(f"{name:<11} mean confidence on the grid {float(conf.mean()):.3f}")
 
 cov = lk.predict_outputs(post, grid).cov.per_input()  # [2500, 4, 4]
 row = cov.sum(-1)
-var = cov.diagonal(dim1=-2, dim2=-1) - row**2 / row.sum(-1, keepdim=True)  # shared shift removed
+var = cov.diagonal(dim1=-2, dim2=-1) - row**2 / row.sum(
+    -1, keepdim=True
+)  # shared shift removed
 ratio = var.max(-1).values / var.min(-1).values
-print(f"logit variance: mean {float(var.mean()):.0f}, median max/min {float(ratio.median()):.1f}")
+print(
+    f"logit variance: mean {float(var.mean()):.0f}, median max/min "
+    f"{float(ratio.median()):.1f}"
+)
 
 # %% [markdown]
 # The probit gives 0.446, but the plain bridge is about as confident as the
@@ -188,9 +237,13 @@ print(f"logit variance: mean {float(var.mean()):.0f}, median max/min {float(rati
 # %%
 torch.manual_seed(0)
 xb = 6 * torch.rand(300, 2) - 3
-yb = torch.stack([xb[:, 0] > 0, xb[:, 1] > 0, xb.norm(dim=1) < 2], dim=1).float()
+yb = torch.stack(
+    [xb[:, 0] > 0, xb[:, 1] > 0, xb.norm(dim=1) < 2], dim=1
+).float()
 
-net = nn.Sequential(nn.Linear(2, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 3))
+net = nn.Sequential(
+    nn.Linear(2, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 3)
+)
 opt = torch.optim.Adam(net.parameters(), lr=1e-2)
 
 for _ in range(500):
@@ -213,8 +266,13 @@ with torch.no_grad():
 
 p_lap = lk.predict(post_b, points).probs
 
-for pt, a, b in zip(points.tolist(), p_map.tolist(), p_lap.tolist(), strict=True):
-    print(f"x = {pt}:  MAP {[round(v, 2) for v in a]},  Laplace {[round(v, 2) for v in b]}")
+for pt, a, b in zip(
+    points.tolist(), p_map.tolist(), p_lap.tolist(), strict=True
+):
+    print(
+        f"x = {pt}:  MAP {[round(v, 2) for v in a]},  Laplace "
+        f"{[round(v, 2) for v in b]}"
+    )
 
 # %% [markdown]
 # The point (1, 1) has all three labels, and both are sure of them. The point

@@ -8,6 +8,16 @@
 # covariance over a few hundred of them is cheap. A subnetwork Laplace picks
 # those weights and keeps the rest fixed. We use the classifier of the
 # [classification page](classification.py).
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-subnet`](https://github.com/laplacekit/laplacekit/tree/main/plugins/subnet)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[subnet]"
+# ```
+# :::
 
 # %%
 import torch
@@ -17,7 +27,11 @@ from torch import nn
 import laplacekit as lk
 
 x_np, y_np = make_blobs(
-    n_samples=500, centers=4, cluster_std=1.2, center_box=(-10, 10), random_state=37
+    n_samples=500,
+    centers=4,
+    cluster_std=1.2,
+    center_box=(-10, 10),
+    random_state=37,
 )
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 data = [(x, y)]
@@ -32,7 +46,9 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(20, 4, bias=False),
 )
-opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+opt = torch.optim.SGD(
+    model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4
+)
 
 for _ in range(5000):
     opt.zero_grad()
@@ -42,8 +58,7 @@ for _ in range(5000):
 model.eval()
 
 # %% [markdown]
-# The strategies live in `lk.subnet` (the `laplacekit-subnet` plugin, installed
-# with the `subnet` extra). `lk.subnet.largest_magnitude(100)` takes the 100 weights
+# The strategies live in `lk.subnet`. `lk.subnet.largest_magnitude(100)` takes the 100 weights
 # with the largest $|\theta|$, out of 640. `DenseGGN(joint=True)` gives them one
 # dense covariance, across layers.
 
@@ -67,7 +82,11 @@ print(post_mag)
 
 # %%
 diag = lk.laplace(
-    model, data, likelihood=lk.Categorical(), subset=lk.subsets.all, hessian_approx=lk.DiagGGN()
+    model,
+    data,
+    likelihood=lk.Categorical(),
+    subset=lk.subsets.all,
+    hessian_approx=lk.DiagGGN(),
 )
 post_var = lk.laplace(
     model,

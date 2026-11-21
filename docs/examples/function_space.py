@@ -112,7 +112,9 @@ x_np, y_np, centers = make_blobs(
     random_state=37,
     return_centers=True,
 )
-xv_np, yv_np = make_blobs(n_samples=200, centers=centers, cluster_std=1.2, random_state=38)
+xv_np, yv_np = make_blobs(
+    n_samples=200, centers=centers, cluster_std=1.2, random_state=38
+)
 x = torch.tensor(x_np, dtype=torch.float32)
 y = torch.tensor(y_np)
 
@@ -126,7 +128,9 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(20, 4, bias=False),
 )
-opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+opt = torch.optim.SGD(
+    model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4
+)
 for _ in range(5000):
     opt.zero_grad()
     loss = nn.functional.cross_entropy(model(x), y)
@@ -195,8 +199,14 @@ probs_w = lk.predict(post, grid, lk.Linearized()).probs
 probs_f = lk.predict(gps[500], grid, lk.Linearized()).probs
 
 print("largest covariance entry:      ", f"{float(cov_w.abs().max()):.4g}")
-print("max |covariance difference|:   ", f"{float((cov_f - cov_w).abs().max()):.2g}")
-print("max |probability difference|:  ", f"{float((probs_f - probs_w).abs().max()):.2g}")
+print(
+    "max |covariance difference|:   ",
+    f"{float((cov_f - cov_w).abs().max()):.2g}",
+)
+print(
+    "max |probability difference|:  ",
+    f"{float((probs_f - probs_w).abs().max()):.2g}",
+)
 
 # %% [markdown]
 # The two agree up to rounding. Below are the confidence maps, the highest
@@ -214,14 +224,26 @@ def confidence(posterior, inputs):
 
 def show(posteriors, names):
     fig, axes = plt.subplots(2, 2, figsize=(9, 8), sharex=True, sharey=True)
-    for ax, posterior, name in zip(axes.ravel(), posteriors, names, strict=True):
+    for ax, posterior, name in zip(
+        axes.ravel(), posteriors, names, strict=True
+    ):
         conf = confidence(posterior, grid)
         im = ax.contourf(
-            gx, gy, conf.numpy().reshape(gx.shape), levels=levels, cmap="Blues", alpha=0.7
+            gx,
+            gy,
+            conf.numpy().reshape(gx.shape),
+            levels=levels,
+            cmap="Blues",
+            alpha=0.7,
         )
         for k, c in enumerate(colors):
             ax.scatter(
-                x_np[y_np == k, 0], x_np[y_np == k, 1], c=c, edgecolors="k", linewidths=0.5, s=10
+                x_np[y_np == k, 0],
+                x_np[y_np == k, 1],
+                c=c,
+                edgecolors="k",
+                linewidths=0.5,
+                s=10,
             )
         ax.set_title(name)
         ax.set_aspect("equal")
@@ -285,14 +307,23 @@ start = lk.priors.Isotropic(torch.tensor(1.0, dtype=torch.float64))
 tuned_gp = lk.tune(copy.replace(gps[50], prior=start), lk.Minimize(nll))
 tuned_post = lk.tune(copy.replace(post, prior=start), lk.Minimize(nll))
 
-print("tuned prior precision, SoD m = 50:", f"{float(tuned_gp.prior.prior_precision):.3g}")
-print("tuned prior precision, weights:   ", f"{float(tuned_post.prior.prior_precision):.3g}")
+print(
+    "tuned prior precision, SoD m = 50:",
+    f"{float(tuned_gp.prior.prior_precision):.3g}",
+)
+print(
+    "tuned prior precision, weights:   ",
+    f"{float(tuned_post.prior.prior_precision):.3g}",
+)
 summarize("SoD, m = 50", tuned_gp)
 summarize("Weight space", tuned_post)
 
 low = lk.priors.Isotropic(torch.tensor(5e-4, dtype=torch.float64))
 plateau = lk.tune(copy.replace(gps[50], prior=low), lk.Minimize(nll))
-print("SoD, m = 50, search from 5e-4:   ", f"{float(plateau.prior.prior_precision):.3g}")
+print(
+    "SoD, m = 50, search from 5e-4:   ",
+    f"{float(plateau.prior.prior_precision):.3g}",
+)
 
 with torch.no_grad():
     map_nll = nn.functional.cross_entropy(model(val[0].inputs), val[0].targets)
@@ -316,13 +347,28 @@ print(f"SoD, m = 50      validation NLL {float(nll(tuned_gp)):.4f} (tuned)")
 # %%
 fig2, axes = plt.subplots(1, 2, figsize=(9, 4), sharey=True)
 for ax, posterior, name in zip(
-    axes, [tuned_gp, tuned_post], ["SoD, m = 50, tuned", "Weight space, tuned"], strict=True
+    axes,
+    [tuned_gp, tuned_post],
+    ["SoD, m = 50, tuned", "Weight space, tuned"],
+    strict=True,
 ):
     conf = confidence(posterior, grid)
-    im = ax.contourf(gx, gy, conf.numpy().reshape(gx.shape), levels=levels, cmap="Blues", alpha=0.7)
+    im = ax.contourf(
+        gx,
+        gy,
+        conf.numpy().reshape(gx.shape),
+        levels=levels,
+        cmap="Blues",
+        alpha=0.7,
+    )
     for k, c in enumerate(colors):
         ax.scatter(
-            x_np[y_np == k, 0], x_np[y_np == k, 1], c=c, edgecolors="k", linewidths=0.5, s=10
+            x_np[y_np == k, 0],
+            x_np[y_np == k, 1],
+            c=c,
+            edgecolors="k",
+            linewidths=0.5,
+            s=10,
         )
     ax.set_title(name)
     ax.set_aspect("equal")
@@ -342,13 +388,25 @@ plt.show()
 # is the default hyper tuner of `lk.laplace`, the weight-space marginal likelihood.
 
 # %%
-evidence_gp = lk.tune(copy.replace(gps[500], prior=start), lk.MarginalLikelihood())
+evidence_gp = lk.tune(
+    copy.replace(gps[500], prior=start), lk.MarginalLikelihood()
+)
 evidence_post = lk.laplace(
-    model, loader, likelihood=lik, prior=start, generator=torch.Generator().manual_seed(0)
+    model,
+    loader,
+    likelihood=lik,
+    prior=start,
+    generator=torch.Generator().manual_seed(0),
 )
 
-print("prior precision, GP evidence:     ", f"{float(evidence_gp.prior.prior_precision):.4g}")
-print("prior precision, weight evidence: ", f"{float(evidence_post.prior.prior_precision):.4g}")
+print(
+    "prior precision, GP evidence:     ",
+    f"{float(evidence_gp.prior.prior_precision):.4g}",
+)
+print(
+    "prior precision, weight evidence: ",
+    f"{float(evidence_post.prior.prior_precision):.4g}",
+)
 summarize("SoD, m = 500", evidence_gp)
 
 # %% [markdown]

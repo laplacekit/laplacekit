@@ -185,13 +185,18 @@ def timed(fit, *args):
 posteriors = {"Exact": timed(exact_fit)}
 lik, prior = posteriors["Exact"][0].likelihood, posteriors["Exact"][0].prior
 print(
-    "prior precision:", f"{float(prior.prior_precision):.3g}", " sigma:", f"{float(lik.sigma):.3g}"
+    "prior precision:",
+    f"{float(prior.prior_precision):.3g}",
+    " sigma:",
+    f"{float(lik.sigma):.3g}",
 )
 
 posteriors["Subset, m = 50"] = timed(gp_fit, fs.SubsetOfData(50))
 
 for r in (5, 10, 15):
-    posteriors[f"ELLA, r = {r}"] = timed(gp_fit, lk.gp.ELLA(lk.gp.from_data(100), rank=r))
+    posteriors[f"ELLA, r = {r}"] = timed(
+        gp_fit, lk.gp.ELLA(lk.gp.from_data(100), rank=r)
+    )
 
 print(posteriors["ELLA, r = 15"][0])
 
@@ -246,7 +251,10 @@ right = (x_out > 8.0).squeeze()
 
 
 def nll_table(posteriors):
-    print(f"{'':<16} {'NLL on [0, 8]':>14} {'left':>7} {'right':>7} {'fit (s)':>8}")
+    print(
+        f"{'':<16} {'NLL on [0, 8]':>14} {'left':>7} {'right':>7} "
+        f"{'fit (s)':>8}"
+    )
 
     for name, (posterior, seconds) in posteriors.items():
         nll = -lk.predict(posterior, x_out).log_prob(y_out).squeeze()
@@ -397,10 +405,16 @@ def learn():
 
     for k in range(1, 4):
         gp = lk.gp.fit_variational(
-            gp, data, n_steps=500, lr=1e-2, alpha=0.0, generator=torch.Generator().manual_seed(0)
+            gp,
+            data,
+            n_steps=500,
+            lr=1e-2,
+            alpha=0.0,
+            generator=torch.Generator().manual_seed(0),
         )
         print(
-            f"after {500 * k:>4} steps: prior precision {float(gp.prior.prior_precision):.3g},",
+            f"after {500 * k:>4} steps: prior precision "
+            f"{float(gp.prior.prior_precision):.3g},",
             f"sigma {float(gp.likelihood.sigma):.3g}",
         )
 
@@ -436,7 +450,13 @@ posteriors["VaLLA, learned λ"] = timed(learn)
 fig, (ax, rug) = plt.subplots(
     2, 1, figsize=(8, 5), sharex=True, gridspec_kw={"height_ratios": [3, 1]}
 )
-shown = ["Exact", "ELLA, r = 15", "VaLLA, α = 1", "VaLLA, α = 0", "VaLLA, learned λ"]
+shown = [
+    "Exact",
+    "ELLA, r = 15",
+    "VaLLA, α = 1",
+    "VaLLA, α = 0",
+    "VaLLA, learned λ",
+]
 
 for name in shown:
     std = lk.predict(posteriors[name][0], x_test).stddev.squeeze()
@@ -458,7 +478,13 @@ rows = {
 
 for i, (name, z) in enumerate(rows.items()):
     print(f"inducing inputs, {name:<7}: from {z.min():.2f} to {z.max():.2f}")
-    rug.plot(z.squeeze(), torch.full((z.shape[0],), float(i)), "|", color="k", markersize=10)
+    rug.plot(
+        z.squeeze(),
+        torch.full((z.shape[0],), float(i)),
+        "|",
+        color="k",
+        markersize=10,
+    )
 
 rug.set_yticks(range(len(rows)), list(rows))
 rug.set_ylim(-0.7, len(rows) - 0.3)

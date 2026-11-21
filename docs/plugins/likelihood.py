@@ -93,7 +93,9 @@ u = utility(x).squeeze(-1)
 y = torch.bernoulli(torch.sigmoid(3 * (u[:, 0] - u[:, 1])))
 loader = list(zip(x.split(100), y.split(100), strict=True))
 
-model = nn.Sequential(nn.Linear(1, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 1))
+model = nn.Sequential(
+    nn.Linear(1, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 1)
+)
 pairs = nn.Sequential(model, nn.Flatten())  # [N, 2, 1] -> [N, 2]
 opt = torch.optim.Adam(pairs.parameters(), lr=1e-2, weight_decay=1e-4)
 
@@ -117,12 +119,18 @@ print("final loss:", round(loss.item(), 3))
 
 # %%
 def bradley_terry(f, y):
-    return -F.binary_cross_entropy_with_logits(f[:, 0] - f[:, 1], y, reduction="none")
+    return -F.binary_cross_entropy_with_logits(
+        f[:, 0] - f[:, 1], y, reduction="none"
+    )
 
 
 lik = lk.likelihoods.from_log_prob(bradley_terry)
 post = lk.laplace(
-    pairs, loader, likelihood=lik, subset=lk.subsets.all, generator=torch.Generator().manual_seed(0)
+    pairs,
+    loader,
+    likelihood=lik,
+    subset=lk.subsets.all,
+    generator=torch.Generator().manual_seed(0),
 )
 print(post)
 
@@ -191,7 +199,9 @@ def win_prob(out):
     v = out.cov.per_input()  # [N, 2, 2]
     var = v[:, 0, 0] + v[:, 1, 1] - 2 * v[:, 0, 1]
 
-    return torch.sigmoid((m[:, 0] - m[:, 1]) / torch.sqrt(1 + math.pi / 8 * var))
+    return torch.sigmoid(
+        (m[:, 0] - m[:, 1]) / torch.sqrt(1 + math.pi / 8 * var)
+    )
 
 
 # %% [markdown]
@@ -201,7 +211,9 @@ def win_prob(out):
 
 # %%
 t = torch.linspace(-6, 6, 300)
-grid = torch.stack([t, torch.zeros_like(t)], dim=1).unsqueeze(-1)  # pairs (x, 0)
+grid = torch.stack([t, torch.zeros_like(t)], dim=1).unsqueeze(
+    -1
+)  # pairs (x, 0)
 
 with torch.no_grad():
     f_map = pairs(grid)
@@ -321,7 +333,10 @@ post_linked = lk.laplace(
 )
 p_default = lk.predict(post_linked, grid).probs
 
-print(f"largest difference from link=PairProbit(): {float((p_default - p_ggn).abs().max()):.1e}")
+print(
+    "largest difference from link=PairProbit(): "
+    f"{float((p_default - p_ggn).abs().max()):.1e}"
+)
 
 # %% [markdown]
 # With the same seed, the Monte Carlo output Hessian draws the same labels, so the
@@ -398,7 +413,10 @@ exact = ggn(post_exact)
 
 
 def rel_err(post):
-    diff = sum(torch.linalg.norm(a - b) ** 2 for a, b in zip(ggn(post), exact, strict=True))
+    diff = sum(
+        torch.linalg.norm(a - b) ** 2
+        for a, b in zip(ggn(post), exact, strict=True)
+    )
     return (diff / sum(torch.linalg.norm(b) ** 2 for b in exact)).sqrt()
 
 
@@ -497,17 +515,23 @@ def test_bradley_terry():
     def nll(fi, yi):
         return -bradley_terry(fi[None], yi[None]).sum()
 
-    want = torch.stack([torch.func.hessian(nll)(fi, torch.tensor(1.0)) for fi in f])
+    want = torch.stack(
+        [torch.func.hessian(nll)(fi, torch.tensor(1.0)) for fi in f]
+    )
 
     torch.testing.assert_close(got.dense(), want)
-    torch.testing.assert_close(got.diagonal(), torch.diagonal(want, dim1=1, dim2=2))
+    torch.testing.assert_close(
+        got.diagonal(), torch.diagonal(want, dim1=1, dim2=2)
+    )
 
     eye = torch.eye(2).expand(6, 2, 2)  # columns of the identity, per example
     a = torch.stack([got.sqrt_mv(eye[:, :, j]) for j in range(2)], dim=-1)
 
     torch.testing.assert_close(a @ a.transpose(1, 2), want)
 
-    lk.testing.check_link(PairProbit(), BradleyTerry(), lk.predict_outputs(post_mc, x[:5]))
+    lk.testing.check_link(
+        PairProbit(), BradleyTerry(), lk.predict_outputs(post_mc, x[:5])
+    )
 
 
 test_bradley_terry()

@@ -140,3 +140,12 @@ def test_language_model_tab(lora_gpt2):
     assert probs.shape == (3, VOCAB)
     assert (probs >= 0).all()
     torch.testing.assert_close(probs.sum(-1), torch.ones(3))
+
+
+def test_citation_matches_the_readme():
+    def bibtex(path):
+        found = re.findall(r"```bibtex\n(.*?)```", path.read_text(), re.S)
+        assert len(found) == 1
+        return found[0]
+
+    assert bibtex(INDEX) == bibtex(INDEX.parents[1] / "README.md")

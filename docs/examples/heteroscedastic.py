@@ -177,12 +177,12 @@ print(post)
 # noise.
 
 # %%
-parts = lk.heteroscedastic.moments(post.likelihood, lk.predict_outputs(post, x_test))
-pred = lk.predict(post, x_test)
-print(
-    "max |predictive var - sum of parts|:",
-    f"{float((pred.variance - parts.epistemic - parts.aleatoric).abs().max()):.1g}",
+parts = lk.heteroscedastic.moments(
+    post.likelihood, lk.predict_outputs(post, x_test)
 )
+pred = lk.predict(post, x_test)
+resid = (pred.variance - parts.epistemic - parts.aleatoric).abs().max()
+print(f"max |predictive var - sum of parts|: {float(resid):.1g}")
 
 
 def at(m, where):
@@ -190,7 +190,8 @@ def at(m, where):
         i = int((t - point).abs().argmin())
         print(
             f"  x = {point}: epistemic {float(m.epistemic[i].sqrt()):.3f}, "
-            f"aleatoric {float(m.aleatoric[i].sqrt()):.3f} (true {0.05 + 0.15 * point:.3f})"
+            f"aleatoric {float(m.aleatoric[i].sqrt()):.3f} (true "
+            f"{0.05 + 0.15 * point:.3f})"
         )
 
 
@@ -215,12 +216,16 @@ last = lk.laplace(
 print(last)
 print("last layer:")
 at(
-    lk.heteroscedastic.moments(last.likelihood, lk.predict_outputs(last, x_test)),
+    lk.heteroscedastic.moments(
+        last.likelihood, lk.predict_outputs(last, x_test)
+    ),
     [0.0, 1.0, 3.0, 4.0],
 )
 
 with torch.no_grad():
-    phi = model[:4](torch.tensor([[2.0], [3.0], [4.0]]))  # the features under the last layer
+    phi = model[:4](
+        torch.tensor([[2.0], [3.0], [4.0]])
+    )  # the features under the last layer
 
 print(f"feature change from x = 2 to 3: {float((phi[1] - phi[0]).norm()):.2f}")
 print(f"feature change from x = 3 to 4: {float((phi[2] - phi[1]).norm()):.2f}")
@@ -248,14 +253,18 @@ print(f"feature change from x = 3 to 4: {float((phi[2] - phi[1]).norm()):.2f}")
 class MeanVarianceGaussian(nn.Module):
     def __init__(self):
         super().__init__()
-        self.body = nn.Sequential(nn.Linear(1, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh())
+        self.body = nn.Sequential(
+            nn.Linear(1, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh()
+        )
         self.mean = nn.Linear(32, 1)
         self.var = nn.Linear(32, 1)
 
     def forward(self, x):
         h = self.body(x)
 
-        return torch.cat([self.mean(h), nn.functional.softplus(self.var(h))], -1)
+        return torch.cat(
+            [self.mean(h), nn.functional.softplus(self.var(h))], -1
+        )
 
 
 lik_mv = lk.heteroscedastic.MeanVarianceGaussian()
@@ -277,7 +286,9 @@ post_mv = lk.laplace(
     hessian_approx=lk.DenseGGN(),
     generator=torch.Generator().manual_seed(0),
 )
-parts_mv = lk.heteroscedastic.moments(post_mv.likelihood, lk.predict_outputs(post_mv, x_test))
+parts_mv = lk.heteroscedastic.moments(
+    post_mv.likelihood, lk.predict_outputs(post_mv, x_test)
+)
 print("mean-only, all weights:")
 at(parts_mv, [0.0, 1.0, 3.0, 4.0])
 
@@ -289,12 +300,18 @@ at(parts_mv, [0.0, 1.0, 3.0, 4.0])
 # %%
 x_val, y_val = draw(500)
 
-for name, p, net in [("natural", post, model), ("mean-only", post_mv, model_mv)]:
+for name, p, net in [
+    ("natural", post, model),
+    ("mean-only", post_mv, model_mv),
+]:
     with torch.no_grad():
         map_nll = -p.likelihood.distribution(net(x_val)).log_prob(y_val).mean()
 
     lap_nll = -lk.predict(p, x_val).log_prob(y_val).mean()
-    print(f"{name:<10} test NLL: MAP {float(map_nll):.3f}, Laplace {float(lap_nll):.3f}")
+    print(
+        f"{name:<10} test NLL: MAP {float(map_nll):.3f}, Laplace "
+        f"{float(lap_nll):.3f}"
+    )
 
 # %% [markdown]
 # Both Laplace predictives improve on their MAP networks: the natural one from
@@ -308,15 +325,25 @@ for name, p, net in [("natural", post, model), ("mean-only", post_mv, model_mv)]
 # %%
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
 
-for ax, m, name in zip(axes, [parts, parts_mv], ["Natural", "Mean-only"], strict=True):
+for ax, m, name in zip(
+    axes, [parts, parts_mv], ["Natural", "Mean-only"], strict=True
+):
     mean = m.mean.squeeze()
     total = (m.epistemic + m.aleatoric).sqrt().squeeze()
     epistemic = m.epistemic.sqrt().squeeze()
 
     ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
     ax.plot(t, mean, label="mean")
-    ax.fill_between(t, mean - 2 * total, mean + 2 * total, alpha=0.2, label="total")
-    ax.fill_between(t, mean - 2 * epistemic, mean + 2 * epistemic, alpha=0.4, label="epistemic")
+    ax.fill_between(
+        t, mean - 2 * total, mean + 2 * total, alpha=0.2, label="total"
+    )
+    ax.fill_between(
+        t,
+        mean - 2 * epistemic,
+        mean + 2 * epistemic,
+        alpha=0.4,
+        label="epistemic",
+    )
     ax.set_title(name)
     ax.set_ylim(-3, 3)
 

@@ -141,3 +141,19 @@ method without reading the core:
 - `print(lk.health())` reports whether the install works: the torch version,
   the `curvlinops` pin, autograd on a small model, float64, and each plugin's own
   checks.
+- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a
+  Markdown copy of every page, the API reference included, for the agent to
+  read.
+
+## Citation
+
+To cite <code><b>laplacekit</b></code>:
+
+```bibtex
+@software{kristiadi2026laplacekit,
+  author = {Kristiadi, Agustinus},
+  title  = {{laplacekit}: An Extensible, Modern {Laplace}-Approximation Library for {PyTorch}},
+  year   = {2026},
+  url    = {https://github.com/laplacekit/laplacekit},
+}
+```

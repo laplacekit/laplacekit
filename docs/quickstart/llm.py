@@ -8,6 +8,16 @@
 # sentence, and put a Laplace approximation on its adapters. The model is
 # `SmolLM2-360M-Instruct` with rank-8 adapters and a 6-class head, trained on
 # the `dair-ai/emotion` dataset.
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-transformers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/transformers)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[transformers]" peft datasets
+# ```
+# :::
 
 # %%
 import warnings
@@ -26,7 +36,9 @@ transformers.logging.set_verbosity_error()
 transformers.utils.logging.disable_progress_bar()
 datasets.disable_progress_bars()
 huggingface_hub.logging.set_verbosity_error()
-warnings.filterwarnings("ignore", category=FutureWarning)  # deprecation notices from transformers
+warnings.filterwarnings(
+    "ignore", category=FutureWarning
+)  # deprecation notices from transformers
 
 BASE = "HuggingFaceTB/SmolLM2-360M-Instruct"
 BASE_REV = "a10cc1512eabd3dde888204e902eca88bddb4951"
@@ -35,10 +47,16 @@ ADAPTER_REV = "c302741c3f2f89a22504f88fb7b6ad27e6ad1319"
 
 tok = AutoTokenizer.from_pretrained(ADAPTER, revision=ADAPTER_REV)
 base = AutoModelForSequenceClassification.from_pretrained(
-    BASE, revision=BASE_REV, num_labels=6, dtype=torch.float32, attn_implementation="eager"
+    BASE,
+    revision=BASE_REV,
+    num_labels=6,
+    dtype=torch.float32,
+    attn_implementation="eager",
 )
 base.config.pad_token_id = tok.pad_token_id
-model = PeftModel.from_pretrained(base, ADAPTER, revision=ADAPTER_REV, is_trainable=True)
+model = PeftModel.from_pretrained(
+    base, ADAPTER, revision=ADAPTER_REV, is_trainable=True
+)
 _ = model.eval()
 
 # %% [markdown]
@@ -57,12 +75,17 @@ classes = train.features["label"].names
 sub = train.shuffle(seed=0).select(range(32))
 
 batches = [
-    {**tok(b["text"], return_tensors="pt", padding=True), "labels": torch.tensor(b["label"])}
+    {
+        **tok(b["text"], return_tensors="pt", padding=True),
+        "labels": torch.tensor(b["label"]),
+    }
     for b in sub.iter(batch_size=16)
 ]
 
 task = lk.transformers.SequenceClassification()
-post = lk.transformers.laplace_lora(model, batches, task=task, n_data=len(train))
+post = lk.transformers.laplace_lora(
+    model, batches, task=task, n_data=len(train)
+)
 print("prior precision:", float(post.prior.prior_precision))
 
 # %% [markdown]

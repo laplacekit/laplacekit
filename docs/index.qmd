@@ -4,7 +4,7 @@ title: "![](assets/logo.svg){.brand-mark .light-content}![](assets/logo-dark.svg
 
 An extensible, modern Laplace-approximation library for PyTorch, built on a plugin system.
 
-Every Laplace method, on any model. Curvatures, likelihoods, priors, predictives and model integrations are all plugins, and the built-in ones are written the same way as yours. It runs on `torch.func` and Curvlinops.
+Curvatures, likelihoods, priors, predictives and model integrations are all plugins, and the built-in ones are also plugins! It runs on `torch.func` and Curvlinops. The goal is flexibility and extensibility: Every Laplace method, on any model. 
 
 ```bash
 pip install laplacekit
@@ -53,10 +53,21 @@ pip install "laplacekit[all]"           # every first-party plugin
 
 :::
 
-**laplacekit** picks the parameters, the curvature and the prior; `print(post)`
-shows what it chose. In the language model tab, `last_token` reads each
-prompt's last real token, so padding does not matter.
+Read more:
 
 - [Quickstart](quickstart/basics.py)
 - [In depth](examples/classification.py)
 - [Plugins](plugins/index.qmd)
+
+## Citation
+
+To cite **laplacekit**:
+
+```bibtex
+@software{kristiadi2026laplacekit,
+  author = {Kristiadi, Agustinus},
+  title  = {{laplacekit}: An Extensible, Modern {Laplace}-Approximation Library for {PyTorch}},
+  year   = {2026},
+  url    = {https://github.com/laplacekit/laplacekit},
+}
+```

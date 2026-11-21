@@ -45,7 +45,7 @@ from laplacekit.core import CapabilityError, Inputs, Posterior, Requirements
 
 
 def bridge(mean: Tensor, var: Tensor) -> Tensor:
-    """Dirichlet concentrations from Gaussian logits with means `mean` and variances `var`."""
+    """Dirichlet parameters from logits with means `mean`, variances `var`."""
 
     k = mean.shape[-1]
     spread = torch.exp(-mean).sum(-1, keepdim=True)
@@ -55,21 +55,30 @@ def bridge(mean: Tensor, var: Tensor) -> Tensor:
 
 @lk.core.pytree
 class LaplaceBridge:
-    """The mean of the Laplace-bridge Dirichlet, for a `Categorical` likelihood."""
+    """The Laplace-bridge Dirichlet mean, for a `Categorical` likelihood."""
 
     @property
     def requires(self) -> Requirements:
         # What the exact output covariance needs: a JVP or a VJP, vmapped.
-        exact = (Requirements(jvp=True, vmap=True), Requirements(vjp=True, vmap=True))
+        exact = (
+            Requirements(jvp=True, vmap=True),
+            Requirements(vjp=True, vmap=True),
+        )
 
         return Requirements(one_of=exact)
 
     def __call__(
-        self, posterior: Posterior, inputs: Inputs, /, *, generator: torch.Generator | None = None
+        self,
+        posterior: Posterior,
+        inputs: Inputs,
+        /,
+        *,
+        generator: torch.Generator | None = None,
     ) -> Distribution:
         if not isinstance(posterior.likelihood, lk.Categorical):
             raise CapabilityError(
-                f"LaplaceBridge needs a Categorical likelihood, got {type(posterior.likelihood).__name__}"
+                "LaplaceBridge needs a Categorical likelihood, got "
+                f"{type(posterior.likelihood).__name__}"
             )
 
         out = lk.predict_outputs(posterior, inputs, n_samples="exact")
@@ -88,11 +97,15 @@ class LaplaceBridge:
 # Carlo draws, so we can compare with them later.
 
 # %%
-x_np, y_np = make_blobs(n_samples=400, centers=4, cluster_std=1.2, random_state=0)
+x_np, y_np = make_blobs(
+    n_samples=400, centers=4, cluster_std=1.2, random_state=0
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4))
+model = nn.Sequential(
+    nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 for _ in range(300):
@@ -101,7 +114,10 @@ for _ in range(300):
     opt.step()
 
 post = lk.laplace(
-    model, [(x, y)], likelihood=lk.Categorical(), generator=torch.Generator().manual_seed(0)
+    model,
+    [(x, y)],
+    likelihood=lk.Categorical(),
+    generator=torch.Generator().manual_seed(0),
 )
 far = 5 * torch.randn(400, 2) + 25
 
@@ -118,7 +134,10 @@ for name, method in methods.items():
         .values.mean()
         for z in (x, far)
     ]
-    print(f"{name:>16}: mean confidence {conf[0]:.3f} on the data, {conf[1]:.3f} far away")
+    print(
+        f"{name:>16}: mean confidence {conf[0]:.3f} on the data, {conf[1]:.3f} "
+        "far away"
+    )
 
 # %% [markdown]
 # On the data, the three agree to about a percent. Far away, the bridge is the
@@ -225,7 +244,9 @@ class SoftmaxAverage(Softmax):
 
 mc = lk.Linearized(link=lk.MC(n_samples=2_000))
 seed = torch.Generator().manual_seed(0)
-conf = lk.predict(copy.replace(post, likelihood=SoftmaxAverage()), far, mc, generator=seed)
+conf = lk.predict(
+    copy.replace(post, likelihood=SoftmaxAverage()), far, mc, generator=seed
+)
 conf = conf.probs.max(-1).values
 print(f"MC link: mean confidence {conf.mean():.3f} far away")
 
@@ -244,7 +265,9 @@ class SoftmaxLinked(SoftmaxAverage):
 
 
 seed = torch.Generator().manual_seed(0)
-conf = lk.predict(copy.replace(post, likelihood=SoftmaxLinked()), far, generator=seed)
+conf = lk.predict(
+    copy.replace(post, likelihood=SoftmaxLinked()), far, generator=seed
+)
 conf = conf.probs.max(-1).values
 print(f"default link: mean confidence {conf.mean():.3f} far away")
 

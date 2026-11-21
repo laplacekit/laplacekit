@@ -1,0 +1,6 @@
+# The docs show code in a narrower column than the source tree.
+extend = "../pyproject.toml"
+line-length = 80
+
+[lint.isort]
+known-first-party = ["laplacekit"]

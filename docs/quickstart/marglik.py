@@ -7,6 +7,16 @@
 # Weight decay and noise are usually picked by hand, or by a grid search over
 # several training runs. Marginal-likelihood training learns them during the one
 # run. We use the data and the network of the [regression page](regression.py).
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-marglik`](https://github.com/laplacekit/laplacekit/tree/main/plugins/marglik)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[marglik]"
+# ```
+# :::
 
 # %%
 import matplotlib.pyplot as plt
@@ -28,8 +38,7 @@ loader = DataLoader(dataset, batch_size=50, shuffle=True)
 model = nn.Sequential(nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 1))
 
 # %% [markdown]
-# `lk.marglik.train` (the `laplacekit-marglik` plugin, installed with the
-# `marglik` extra) replaces the training loop. The optimizer has no weight
+# `lk.marglik.train` replaces the training loop. The optimizer has no weight
 # decay: the prior precision $\lambda$ sets it, one per layer by default.
 
 # %%
@@ -45,7 +54,10 @@ trained = lk.marglik.train(
 post = trained.posterior
 print(post)
 
-print("lambda:", {k: round(float(v), 3) for k, v in post.prior.prior_precision.items()})
+print(
+    "lambda:",
+    {k: round(float(v), 3) for k, v in post.prior.prior_precision.items()},
+)
 print("sigma: ", round(float(post.likelihood.sigma), 3))
 print("best epoch:", trained.best_epoch)
 
@@ -57,7 +69,9 @@ t = x_test.squeeze()
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5", label="data")
 ax.plot(t, mean, label="mean")
-ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std")
+ax.fill_between(
+    t, mean - 2 * std, mean + 2 * std, alpha=0.3, label="mean ± 2 std"
+)
 ax.legend()
 plt.show()
 

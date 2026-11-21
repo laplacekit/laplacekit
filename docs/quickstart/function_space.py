@@ -55,7 +55,9 @@ print(gp)
 t = x_test.squeeze()
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
 
-for ax, posterior, name in zip(axes, [post, gp], ["Weight space", "GP on 30 points"], strict=True):
+for ax, posterior, name in zip(
+    axes, [post, gp], ["Weight space", "GP on 30 points"], strict=True
+):
     pred = lk.predict(posterior, x_test)
     mean, std = pred.mean.squeeze(), pred.stddev.squeeze()
     ax.scatter(x.squeeze(), y.squeeze(), s=8, color="0.5")

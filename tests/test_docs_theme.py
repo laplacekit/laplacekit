@@ -1,6 +1,7 @@
 """The docs config: theme files, light and dark modes, navbar, and section sidebars."""
 
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -315,10 +316,34 @@ def test_output_sits_close_to_its_code():
     assert "margin-bottom: 0.75rem" in rule("main.content .cell div.sourceCode")
 
 
-def test_code_has_the_default_column():
-    """A narrower column makes the examples' long lines and outputs scroll."""
+def test_code_column_fits_80_characters_in_a_1200px_window():
+    """Narrow side columns leave the body room for 80-character code lines."""
 
-    assert "grid" not in HTML
+    grid = HTML["grid"]
+
+    assert "body-width" not in grid  # Quarto's default; narrower makes code scroll
+    assert int(grid["sidebar-width"].removesuffix("px")) <= 220
+    assert int(grid["margin-width"].removesuffix("px")) <= 200
+
+
+def test_docs_code_is_formatted_at_80_columns():
+    ruff = tomllib.loads((DOCS / "ruff.toml").read_text())
+
+    assert ruff["line-length"] == 80
+
+
+def test_no_docs_code_line_is_longer_than_80_characters():
+    """E501 is off for the scripts (prose cells hold LaTeX), so check code here."""
+
+    long = [
+        f"{path.relative_to(DOCS)}:{n}"
+        for folder in ("quickstart", "examples", "plugins")
+        for path in sorted((DOCS / folder).glob("*.py"))
+        for n, line in enumerate(path.read_text().splitlines(), 1)
+        if len(line) > 80 and not line.startswith("#")
+    ]
+
+    assert long == []
 
 
 def test_page_is_centred_on_wide_screens():

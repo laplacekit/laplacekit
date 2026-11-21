@@ -16,6 +16,7 @@ project:
 filters:
   - brand.lua
   - tables.lua
+  - llms-link.lua
 
 # A page re-executes only when its source changed; `make docs-full` re-runs all.
 execute:
@@ -27,6 +28,10 @@ website:
   site-url: https://laplacekit.org
   title: laplacekit
   favicon: assets/favicon.svg
+  # llms.txt plus a Markdown copy of every page (<page>.llms.md), for coding agents.
+  llms-txt: true
+  page-footer:
+    center: "Docs for coding agents: [llms.txt](https://laplacekit.org/llms.txt)"
   navbar:
     # The wordmark is the logo and the name in one SVG, so the text title is off.
     title: false
@@ -204,6 +209,11 @@ format:
       light: arrow-light
       dark: arrow-dark
     toc: true
+    # Narrow side columns leave the body room for 80-character code (docs/ruff.toml)
+    # in a window about 1200px wide.
+    grid:
+      sidebar-width: 220px
+      margin-width: 200px
     # Light or dark follows the system setting, with no switch (assets/color-scheme.html).
     respect-user-color-scheme: true
     # MathJax's font must be set before Quarto loads it (assets/mathjax.html).

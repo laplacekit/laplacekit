@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHighlighter } from "shiki";
 
-const LANGS = ["python", "bash", "diff", "ini", "toml", "yaml"];
+const LANGS = ["python", "bash", "bibtex", "diff", "ini", "toml", "yaml"];
 const THEMES = {
   light: JSON.parse(readFileSync(new URL("./laplacekit-light.json", import.meta.url), "utf8")),
   dark: JSON.parse(readFileSync(new URL("./laplacekit-dark.json", import.meta.url), "utf8")),

@@ -48,7 +48,7 @@ def file(obj: object) -> str:
 
 
 def show(*objs: object) -> None:
-    """Print the source of each function as one fenced block, without its docstring."""
+    """Print each function's source as one fenced block, minus its docstring."""
 
     parts = []
 
@@ -57,12 +57,20 @@ def show(*objs: object) -> None:
         body = ast.parse(src).body[0].body
         lines = src.splitlines()
 
-        if isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
-            del lines[body[0].lineno - 1 : body[0].end_lineno + 1]  # and the blank line after
+        if isinstance(body[0], ast.Expr) and isinstance(
+            body[0].value, ast.Constant
+        ):
+            del lines[
+                body[0].lineno - 1 : body[0].end_lineno + 1
+            ]  # and the blank line after
 
         parts.append("\n".join(lines))
 
-    print(f'```{{.python filename="{file(objs[0])}"}}\n' + "\n\n\n".join(parts) + "\n```")
+    print(
+        f'```{{.python filename="{file(objs[0])}"}}\n'
+        + "\n\n\n".join(parts)
+        + "\n```"
+    )
 
 
 show(laplacekit_diffusers.denoiser)

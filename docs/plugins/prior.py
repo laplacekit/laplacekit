@@ -50,13 +50,15 @@ from laplacekit.core import Operator, Params
 
 @lk.core.pytree
 class WeightBias:
-    """N(0, diag(prior_precision)^-1) with one precision for the weights and one for the biases."""
+    """Zero-mean Gaussian prior, one precision for weights, one for biases."""
 
     prior_precision: Mapping[str, Tensor]  # {"weight": ..., "bias": ...}
-    is_bias: Tensor  # 1.0 at each bias entry, 0.0 elsewhere, flat over the parameters
+    # 1.0 at each bias entry, 0.0 elsewhere, flat over the parameters
+    is_bias: Tensor
 
     def __repr__(self) -> str:
-        return f"WeightBias(weight={self.prior_precision['weight']:.3g}, bias={self.prior_precision['bias']:.3g})"
+        lam = self.prior_precision
+        return f"WeightBias(weight={lam['weight']:.3g}, bias={lam['bias']:.3g})"
 
     def _diagonal(self) -> lk.priors.Diagonal:
         w, b = self.prior_precision["weight"], self.prior_precision["bias"]
@@ -79,11 +81,19 @@ class WeightBias:
         return self.prior_precision
 
 
-def weight_bias(params: Params, weight: float = 1.0, bias: float = 1.0) -> WeightBias:
+def weight_bias(
+    params: Params, weight: float = 1.0, bias: float = 1.0
+) -> WeightBias:
     """A `WeightBias` prior over `params`; the 1-d tensors are the biases."""
 
-    parts = [torch.full((p.numel(),), float(p.ndim == 1), dtype=p.dtype) for p in params.values()]
-    prior_precision = {"weight": torch.tensor(weight), "bias": torch.tensor(bias)}
+    parts = [
+        torch.full((p.numel(),), float(p.ndim == 1), dtype=p.dtype)
+        for p in params.values()
+    ]
+    prior_precision = {
+        "weight": torch.tensor(weight),
+        "bias": torch.tensor(bias),
+    }
 
     return WeightBias(prior_precision, torch.cat(parts))
 
@@ -95,11 +105,15 @@ def weight_bias(params: Params, weight: float = 1.0, bias: float = 1.0) -> Weigh
 # our prior and once with the default `Isotropic`.
 
 # %%
-x_np, y_np = make_blobs(n_samples=400, centers=4, cluster_std=1.2, random_state=0)
+x_np, y_np = make_blobs(
+    n_samples=400, centers=4, cluster_std=1.2, random_state=0
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(), nn.Linear(64, 4))
+model = nn.Sequential(
+    nn.Linear(2, 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh(), nn.Linear(64, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 for _ in range(300):
@@ -173,13 +187,18 @@ def test_weight_bias():
     assert isinstance(prior, lk.core.TunablePrior)
 
     std = {k: (0.5 if p.ndim == 1 else 2.0) ** -0.5 for k, p in p64.items()}
-    want = sum(torch.distributions.Normal(0.0, std[k]).log_prob(p).sum() for k, p in p64.items())
+    want = sum(
+        torch.distributions.Normal(0.0, std[k]).log_prob(p).sum()
+        for k, p in p64.items()
+    )
 
     torch.testing.assert_close(prior.log_prob(p64), want)
 
     flat = torch.cat([p.reshape(-1) for p in p64.values()])
     zero = lk.core.Diag(torch.zeros_like(flat))
-    is_bias = torch.cat([torch.full((p.numel(),), p.ndim == 1) for p in p64.values()])
+    is_bias = torch.cat(
+        [torch.full((p.numel(),), p.ndim == 1) for p in p64.values()]
+    )
 
     torch.testing.assert_close(
         prior.add_precision_to(zero).diagonal(),

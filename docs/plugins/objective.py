@@ -39,7 +39,7 @@ from laplacekit.core import Objective, Posterior
 
 
 def brier(data: list[tuple[Tensor, Tensor]]) -> Objective[Posterior]:
-    """Mean squared distance of the predicted probabilities from the one-hot targets."""
+    """Mean squared distance of the probabilities from the one-hot targets."""
 
     def objective(posterior: Posterior) -> Tensor:
         total, n = torch.zeros(()), 0
@@ -62,13 +62,17 @@ def brier(data: list[tuple[Tensor, Tensor]]) -> Objective[Posterior]:
 # objective for the prior precision.
 
 # %%
-x_np, y_np = make_blobs(n_samples=600, centers=4, cluster_std=2.0, random_state=1)
+x_np, y_np = make_blobs(
+    n_samples=600, centers=4, cluster_std=2.0, random_state=1
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 x_train, y_train, x_val, y_val = x[:400], y[:400], x[400:], y[400:]
 val = [(x_val, y_val)]
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4))
+model = nn.Sequential(
+    nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 for _ in range(500):
@@ -83,10 +87,15 @@ tuners = {
 }
 
 for name, tuner in tuners.items():
-    post = lk.laplace(model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=tuner)
+    post = lk.laplace(
+        model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=tuner
+    )
     nll, score = lk.objectives.predictive_nll(val)(post), brier(val)(post)
     lam = post.prior.prior_precision
-    print(f"{name:>19}: prior precision {lam:.3f}, val NLL {nll:.4f}, val Brier {score:.4f}")
+    print(
+        f"{name:>19}: prior precision {lam:.3f}, val NLL {nll:.4f}, val Brier "
+        f"{score:.4f}"
+    )
 
 # %% [markdown]
 # The validation NLL picks the smallest precision and gets the lowest NLL. The
@@ -100,7 +109,9 @@ for name, tuner in tuners.items():
 # the prior precision, and the noise of a learned `lk.Gaussian()`.
 
 # %%
-post = lk.laplace(model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=None)
+post = lk.laplace(
+    model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=None
+)
 tuned = lk.tune(post, lk.Minimize(brier(val)))
 print(f"prior precision {tuned.prior.prior_precision:.3f}")
 
@@ -132,7 +143,9 @@ print(f"prior precision {tuned.prior.prior_precision:.3f}")
 
 # %%
 def test_brier():
-    post = lk.laplace(model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=None)
+    post = lk.laplace(
+        model, [(x_train, y_train)], lk.Categorical(), hyper_tuner=None
+    )
 
     lk.testing.check_objective(brier(val), post)
 

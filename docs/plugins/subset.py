@@ -46,26 +46,39 @@ from laplacekit.core import (
 
 
 def budget(max_params: int) -> Subset:
-    """The most layers from the end whose own parameters fit into `max_params`."""
+    """The most layers from the end whose parameters fit into `max_params`."""
 
     def subset(model: ModelFn, caps: Capabilities, /) -> Params:
         if model.module is None:
-            raise StructureError("budget needs a module, but ModelFn.module is None")
+            raise StructureError(
+                "budget needs a module, but ModelFn.module is None"
+            )
 
         chosen: Params = {}
 
         for name in reversed(caps.module_order):
-            module = model.module if name == ROOT_BLOCK else model.module.get_submodule(name)
+            module = (
+                model.module
+                if name == ROOT_BLOCK
+                else model.module.get_submodule(name)
+            )
             prefix = "" if name == ROOT_BLOCK else f"{name}."
-            own = {prefix + k: p for k, p in module.named_parameters(recurse=False)}
+            own = {
+                prefix + k: p for k, p in module.named_parameters(recurse=False)
+            }
 
-            if sum(p.numel() for p in [*chosen.values(), *own.values()]) > max_params:
+            if (
+                sum(p.numel() for p in [*chosen.values(), *own.values()])
+                > max_params
+            ):
                 break
 
             chosen = own | chosen  # keep the forward order
 
         if not chosen:
-            raise StructureError(f"budget({max_params}): the last layer alone is larger")
+            raise StructureError(
+                f"budget({max_params}): the last layer alone is larger"
+            )
 
         return chosen
 
@@ -82,11 +95,15 @@ def budget(max_params: int) -> Subset:
 # budget of 500 gets the last layer only, and 1,200 gets the last two.
 
 # %%
-x_np, y_np = make_blobs(n_samples=400, centers=4, cluster_std=1.2, random_state=0)
+x_np, y_np = make_blobs(
+    n_samples=400, centers=4, cluster_std=1.2, random_state=0
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4))
+model = nn.Sequential(
+    nn.Linear(2, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh(), nn.Linear(32, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 for _ in range(300):
@@ -134,14 +151,16 @@ except lk.StructureError as e:
 
 # %%
 def fill(max_params: int) -> Subset:
-    """`budget(max_params)`, topped up with the largest-magnitude entries of the rest."""
+    """`budget(max_params)` plus the largest-magnitude entries of the rest."""
 
     def subset(model: ModelFn, caps: Capabilities, /) -> Selection:
         whole = budget(max_params)(model, caps)
         params = lk.subsets.all(model, caps)
         rest = [n for n in params if n not in whole]
         left = max_params - sum(p.numel() for p in whole.values())
-        masks = {n: torch.ones_like(p, dtype=torch.bool) for n, p in whole.items()}
+        masks = {
+            n: torch.ones_like(p, dtype=torch.bool) for n, p in whole.items()
+        }
 
         # The whole layers already fill the budget, or nothing else is left.
         if not rest or left == 0:
@@ -151,7 +170,10 @@ def fill(max_params: int) -> Subset:
         top = torch.zeros(flat.numel(), dtype=torch.bool)
         top[flat.topk(left).indices] = True
         parts = top.split([params[n].numel() for n in rest])
-        masks |= {n: m.reshape(params[n].shape) for n, m in zip(rest, parts, strict=True)}
+        masks |= {
+            n: m.reshape(params[n].shape)
+            for n, m in zip(rest, parts, strict=True)
+        }
 
         return Selection.from_masks(params, masks)
 
@@ -159,7 +181,11 @@ def fill(max_params: int) -> Subset:
 
 
 post = lk.laplace(
-    model, [(x, y)], likelihood=lk.Categorical(), subset=fill(500), hessian_approx=lk.DenseGGN()
+    model,
+    [(x, y)],
+    likelihood=lk.Categorical(),
+    subset=fill(500),
+    hessian_approx=lk.DenseGGN(),
 )
 print(post)
 print("entries:", sum(v.numel() for v in post.mean.values()))
@@ -198,7 +224,9 @@ print("entries:", sum(v.numel() for v in post.mean.values()))
 def probed(model: nn.Module) -> Capabilities:
     batch = lk.Batch(x[:4], y[:4])
 
-    return lk.core.probe(ModelFn.from_module(model), lk.Categorical(), batch, params={})
+    return lk.core.probe(
+        ModelFn.from_module(model), lk.Categorical(), batch, params={}
+    )
 
 
 def test_budget():
@@ -210,7 +238,12 @@ def test_budget():
     fn = ModelFn.from_module(model)
 
     assert list(budget(300)(fn, caps)) == ["4.weight", "4.bias"]
-    assert list(budget(1_188)(fn, caps)) == ["2.weight", "2.bias", "4.weight", "4.bias"]
+    assert list(budget(1_188)(fn, caps)) == [
+        "2.weight",
+        "2.bias",
+        "4.weight",
+        "4.bias",
+    ]
     assert len(budget(10_000)(fn, caps)) == 6
 
     with pytest.raises(StructureError, match="last layer alone"):
@@ -231,7 +264,8 @@ def test_fill():
     assert sum(idx.numel() for idx in chosen.index.values()) == 500
     assert torch.equal(chosen.index["4.weight"], torch.arange(128))
 
-    # Whole layers that use up the budget, or every parameter, leave nothing to top up.
+    # Whole layers that use up the budget, or every parameter, leave nothing to
+    # top up.
     total = sum(p.numel() for p in model.parameters())
 
     for max_params in (1_188, total, 10_000):

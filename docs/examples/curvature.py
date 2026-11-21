@@ -140,7 +140,10 @@ def fit(name, **kwargs):
     posts[name] = lk.laplace(model, loader, likelihood=lik, **kwargs)
     seconds = time.perf_counter() - start
 
-    print(f"{name}: {seconds:.2f} s, log marginal likelihood {posts[name].log_marglik():.1f}")
+    print(
+        f"{name}: {seconds:.2f} s, log marginal likelihood "
+        f"{posts[name].log_marglik():.1f}"
+    )
 
 
 # %% [markdown]
@@ -171,7 +174,11 @@ fit("Diag", hessian_approx=lk.DiagGGN(), subset=lk.subsets.all)
 # 330$ matrix, which is cheap to store and to factorize.
 
 # %%
-fit("DenseGGN (last layer)", hessian_approx=lk.DenseGGN(), subset=lk.subsets.last_layer)
+fit(
+    "DenseGGN (last layer)",
+    hessian_approx=lk.DenseGGN(),
+    subset=lk.subsets.last_layer,
+)
 
 # %% [markdown]
 # ## KFAC
@@ -236,7 +243,11 @@ fit("KFAC", hessian_approx=lk.KFAC(), subset=lk.subsets.all)
 # traces.
 
 # %%
-fit("KFAC (empirical)", hessian_approx=lk.KFAC(fisher="empirical"), subset=lk.subsets.all)
+fit(
+    "KFAC (empirical)",
+    hessian_approx=lk.KFAC(fisher="empirical"),
+    subset=lk.subsets.all,
+)
 fit(
     "Dense empirical (last layer)",
     hessian_approx=lk.DenseGGN(fisher="empirical"),
@@ -245,7 +256,9 @@ fit(
 
 ggn_8 = posts["DenseGGN (last layer)"].curvature.blocks["8"].mat
 ef_8 = posts["Dense empirical (last layer)"].curvature.blocks["8"].mat
-print(f"trace ratio, empirical Fisher / GGN: {ef_8.trace() / ggn_8.trace():.2f}")
+print(
+    f"trace ratio, empirical Fisher / GGN: {ef_8.trace() / ggn_8.trace():.2f}"
+)
 
 # %% [markdown]
 # The empirical Fisher has 0.38 times the trace of the GGN on the last layer.
@@ -268,11 +281,18 @@ print(f"trace ratio, empirical Fisher / GGN: {ef_8.trace() / ggn_8.trace():.2f}"
 
 # %%
 small = lk.subsets.named("0.*", "2.*", "8.*")
-print("parameters:", sum(p.numel() for i in (0, 2, 8) for p in model[i].parameters()))
+print(
+    "parameters:",
+    sum(p.numel() for i in (0, 2, 8) for p in model[i].parameters()),
+)
 
 fit("Diag (small)", hessian_approx=lk.DiagGGN(), subset=small)
 fit("DenseGGN per block (small)", hessian_approx=lk.DenseGGN(), subset=small)
-fit("DenseGGN joint (small)", hessian_approx=lk.DenseGGN(joint=True), subset=small)
+fit(
+    "DenseGGN joint (small)",
+    hessian_approx=lk.DenseGGN(joint=True),
+    subset=small,
+)
 
 # %% [markdown]
 # The more correlations a fit keeps, the higher its $\log Z$: $-939.8$ for the
@@ -352,7 +372,11 @@ fit("LowRankGGN (small)", hessian_approx=lk.LowRankGGN(rank=100), subset=small)
 # Hessian is the GGN.
 
 # %%
-fit("DenseHessian (last layer)", hessian_approx=lk.DenseHessian(), subset=lk.subsets.last_layer)
+fit(
+    "DenseHessian (last layer)",
+    hessian_approx=lk.DenseHessian(),
+    subset=lk.subsets.last_layer,
+)
 
 hess_8 = posts["DenseHessian (last layer)"].curvature.blocks["8"].mat
 print(f"last layer, max |Hessian - GGN|: {(hess_8 - ggn_8).abs().max():.1e}")
@@ -374,16 +398,27 @@ print(f"last layer, max |Hessian - GGN|: {(hess_8 - ggn_8).abs().max():.1e}")
 pair = lk.subsets.named("0.*", "8.*")
 joint = {
     name: lk.laplace(
-        model, loader, likelihood=lik, subset=pair, hessian_approx=approx, hyper_tuner=None
+        model,
+        loader,
+        likelihood=lik,
+        subset=pair,
+        hessian_approx=approx,
+        hyper_tuner=None,
     )
-    for name, approx in [("GGN", lk.DenseGGN(joint=True)), ("Hessian", lk.DenseHessian(joint=True))]
+    for name, approx in [
+        ("GGN", lk.DenseGGN(joint=True)),
+        ("Hessian", lk.DenseHessian(joint=True)),
+    ]
 }
 hess, ggn = joint["Hessian"].curvature.op.mat, joint["GGN"].curvature.op.mat
 evals = torch.linalg.eigvalsh(hess)
 rel = torch.linalg.matrix_norm(hess - ggn) / torch.linalg.matrix_norm(ggn)
 
 print(f"relative difference |Hessian - GGN| / |GGN|: {rel:.1e}")
-print(f"negative eigenvalues of the Hessian: {(evals < 0).sum()} of {evals.numel()}")
+print(
+    f"negative eigenvalues of the Hessian: {(evals < 0).sum()} of "
+    f"{evals.numel()}"
+)
 print(f"N times the smallest one: {joint['Hessian'].n_data * evals.min():.1f}")
 print("prior:", joint["Hessian"].prior)
 
@@ -406,7 +441,10 @@ except lk.StructureError as e:
 # %%
 for name, post in joint.items():
     stiffer = copy.replace(post, prior=lk.priors.Isotropic(20.0))
-    print(f"{name}, lambda = 20: log marginal likelihood {stiffer.log_marglik():.1f}")
+    print(
+        f"{name}, lambda = 20: log marginal likelihood "
+        f"{stiffer.log_marglik():.1f}"
+    )
 
 # %% [markdown]
 # On this model, the Hessian gives about what the GGN gives, at a higher cost:
@@ -458,12 +496,23 @@ noise = torch.rand(x_plot.shape, generator=torch.Generator().manual_seed(1))
 corrupted = [(1 - t) * x_plot + t * noise for t in ts]
 
 with torch.no_grad():
-    curves = {"MAP": [model(xc).softmax(-1).max(-1).values.mean() for xc in corrupted]}
+    curves = {
+        "MAP": [model(xc).softmax(-1).max(-1).values.mean() for xc in corrupted]
+    }
 
-plotted = ["Diag", "DenseGGN (last layer)", "KFAC", "KFAC (empirical)", "LowRankGGN"]
+plotted = [
+    "Diag",
+    "DenseGGN (last layer)",
+    "KFAC",
+    "KFAC (empirical)",
+    "LowRankGGN",
+]
 
 for name in plotted:
-    curves[name] = [lk.predict(posts[name], xc).probs.max(-1).values.mean() for xc in corrupted]
+    curves[name] = [
+        lk.predict(posts[name], xc).probs.max(-1).values.mean()
+        for xc in corrupted
+    ]
 
 fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
 for name, conf in curves.items():

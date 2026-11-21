@@ -62,7 +62,11 @@ import laplacekit as lk
 
 # %%
 x_np, y_np = make_blobs(
-    n_samples=500, centers=4, cluster_std=1.2, center_box=(-10, 10), random_state=37
+    n_samples=500,
+    centers=4,
+    cluster_std=1.2,
+    center_box=(-10, 10),
+    random_state=37,
 )
 x = torch.tensor(x_np, dtype=torch.float32)
 y = torch.tensor(y_np)
@@ -77,7 +81,9 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(20, 4, bias=False),
 )
-opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+opt = torch.optim.SGD(
+    model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4
+)
 
 for _ in range(5000):
     opt.zero_grad()
@@ -86,7 +92,9 @@ for _ in range(5000):
 
 model.eval().double()
 x = x.double()
-batches = [lk.Batch(xb, yb) for xb, yb in zip(x.split(100), y.split(100), strict=True)]
+batches = [
+    lk.Batch(xb, yb) for xb, yb in zip(x.split(100), y.split(100), strict=True)
+]
 
 # %% [markdown]
 # ## The model as a function
@@ -228,8 +236,13 @@ post = copy.replace(post, data_fit=(stat.data_fit,))
 tuned = lk.tune(post, lk.MarginalLikelihood())
 default = lk.laplace(model, batches, likelihood=lik)
 
-print("prior precision, by hand:   ", f"{float(tuned.prior.prior_precision):.4f}")
-print("prior precision, lk.laplace:", f"{float(default.prior.prior_precision):.4f}")
+print(
+    "prior precision, by hand:   ", f"{float(tuned.prior.prior_precision):.4f}"
+)
+print(
+    "prior precision, lk.laplace:",
+    f"{float(default.prior.prior_precision):.4f}",
+)
 
 # %% [markdown]
 # `lk.GridSearch` takes an objective, here `lk.objectives.neg_log_marglik`
@@ -242,15 +255,24 @@ print("prior precision, lk.laplace:", f"{float(default.prior.prior_precision):.4
 objective = lk.objectives.neg_log_marglik
 values = torch.logspace(-4, 2, 25, dtype=torch.float64)
 best = lk.tune(post, lk.GridSearch(objective, values=values))
-print("prior precision, grid:      ", f"{float(best.prior.prior_precision):.4f}")
+print(
+    "prior precision, grid:      ", f"{float(best.prior.prior_precision):.4f}"
+)
 
 with torch.no_grad():
-    curve = [float(objective(copy.replace(post, prior=lk.priors.Isotropic(v)))) for v in values]
+    curve = [
+        float(objective(copy.replace(post, prior=lk.priors.Isotropic(v))))
+        for v in values
+    ]
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.plot(values, curve, marker="o", markersize=3)
-ax.axvline(float(best.prior.prior_precision), color="0.6", linestyle=":", label="grid")
-ax.axvline(float(tuned.prior.prior_precision), color="k", linestyle="--", label="tune")
+ax.axvline(
+    float(best.prior.prior_precision), color="0.6", linestyle=":", label="grid"
+)
+ax.axvline(
+    float(tuned.prior.prior_precision), color="k", linestyle="--", label="tune"
+)
 ax.set_xscale("log")
 ax.set_xlabel(r"prior precision $\lambda$")
 ax.set_ylabel("negative log marginal likelihood")

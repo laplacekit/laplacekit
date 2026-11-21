@@ -38,6 +38,7 @@ all = [
 
 [project.urls]
 Homepage = "https://laplacekit.org"
+"Docs for LLMs" = "https://laplacekit.org/llms.txt"
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]

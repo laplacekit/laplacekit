@@ -46,7 +46,11 @@ import laplacekit as lk
 
 # %%
 x_np, y_np = make_blobs(
-    n_samples=500, centers=4, cluster_std=1.2, center_box=(-10, 10), random_state=37
+    n_samples=500,
+    centers=4,
+    cluster_std=1.2,
+    center_box=(-10, 10),
+    random_state=37,
 )
 x = torch.tensor(x_np, dtype=torch.float32)
 y = torch.tensor(y_np)
@@ -62,7 +66,9 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(20, 4, bias=False),
 )
-opt = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4)
+opt = torch.optim.SGD(
+    model.parameters(), lr=1e-3, momentum=0.9, weight_decay=5e-4
+)
 for _ in range(5000):
     opt.zero_grad()
     loss = nn.functional.cross_entropy(model(x), y)
@@ -124,7 +130,9 @@ print(post)
 # %%
 lin = np.linspace(-15, 15, 50)
 gx, gy = np.meshgrid(lin, lin)
-grid = torch.tensor(np.stack([gx.ravel(), gy.ravel()], axis=1), dtype=torch.float32)
+grid = torch.tensor(
+    np.stack([gx.ravel(), gy.ravel()], axis=1), dtype=torch.float32
+)
 levels = np.arange(0.3, 1.01, 0.1)
 
 with torch.no_grad():
@@ -137,14 +145,26 @@ colors = ["coral", "yellow", "yellowgreen", "violet"]
 
 
 def show(confs, names):
-    fig, axes = plt.subplots(1, len(confs), figsize=(4.5 * len(confs), 4), sharey=True)
+    fig, axes = plt.subplots(
+        1, len(confs), figsize=(4.5 * len(confs), 4), sharey=True
+    )
     for ax, conf, name in zip(axes, confs, names, strict=True):
         im = ax.contourf(
-            gx, gy, conf.numpy().reshape(gx.shape), levels=levels, cmap="Blues", alpha=0.7
+            gx,
+            gy,
+            conf.numpy().reshape(gx.shape),
+            levels=levels,
+            cmap="Blues",
+            alpha=0.7,
         )
         for k, c in enumerate(colors):
             ax.scatter(
-                x_np[y_np == k, 0], x_np[y_np == k, 1], c=c, edgecolors="k", linewidths=0.5, s=14
+                x_np[y_np == k, 0],
+                x_np[y_np == k, 1],
+                c=c,
+                edgecolors="k",
+                linewidths=0.5,
+                s=14,
             )
         ax.set_title(name)
         ax.set_aspect("equal")
@@ -169,7 +189,9 @@ far = torch.tensor([bool((torch.cdist(g[None], x) > 5).all()) for g in grid])
 
 
 def summarize(name, on, conf):
-    print(f"{name:<22} on data {on.mean():.2f}, far away {conf[far].mean():.2f}")
+    print(
+        f"{name:<22} on data {on.mean():.2f}, far away {conf[far].mean():.2f}"
+    )
 
 
 summarize("MAP", map_on, map_conf)
@@ -231,9 +253,15 @@ plt.show()
 
 # %%
 _, _, centers = make_blobs(
-    n_samples=500, centers=4, center_box=(-10, 10), random_state=37, return_centers=True
+    n_samples=500,
+    centers=4,
+    center_box=(-10, 10),
+    random_state=37,
+    return_centers=True,
 )
-xv_np, yv_np = make_blobs(n_samples=200, centers=centers, cluster_std=1.2, random_state=1)
+xv_np, yv_np = make_blobs(
+    n_samples=200, centers=centers, cluster_std=1.2, random_state=1
+)
 val = [(torch.tensor(xv_np, dtype=torch.float32), torch.tensor(yv_np))]
 
 nll = lk.objectives.predictive_nll(val)
@@ -252,12 +280,20 @@ picked = {
     for name, objective in objectives.items()
 }
 
-print(f"{'λ from':<14} {'λ':>8} {'NLL':>6} {'Brier':>6} {'ECE':>6} {'far away':>9}")
+print(
+    f"{'λ from':<14} {'λ':>8} {'NLL':>6} {'Brier':>6} {'ECE':>6} "
+    f"{'far away':>9}"
+)
 
 for name, p in {"weight decay": post, **picked}.items():
     far_conf = lk.predict(p, grid).probs.max(-1).values[far].mean()
-    scores = " ".join(f"{float(objective(p)):6.3f}" for objective in (nll, brier, ece))
-    print(f"{name:<14} {float(p.prior.prior_precision):8.3g} {scores} {float(far_conf):9.2f}")
+    scores = " ".join(
+        f"{float(objective(p)):6.3f}" for objective in (nll, brier, ece)
+    )
+    print(
+        f"{name:<14} {float(p.prior.prior_precision):8.3g} {scores} "
+        f"{float(far_conf):9.2f}"
+    )
 
 # %% [markdown]
 # On the grid, the marginal likelihood picks $\lambda = 1$, next to the 1.05
@@ -328,7 +364,10 @@ summarize("Laplace, probit", lap_on, lap_conf)
 summarize("Laplace, bridge", bridge_on, bridge_conf)
 summarize("Laplace, normalized", normalized_on, normalized_conf)
 
-fig3 = show([lap_conf, bridge_conf, normalized_conf], ["Probit", "Bridge", "Normalized bridge"])
+fig3 = show(
+    [lap_conf, bridge_conf, normalized_conf],
+    ["Probit", "Bridge", "Normalized bridge"],
+)
 plt.show()
 
 # %% [markdown]
@@ -341,7 +380,10 @@ cov = lk.predict_outputs(post, grid[far]).cov.per_input()  # [points, 4, 4]
 row = cov.sum(-1)
 v = cov.diagonal(dim1=-2, dim2=-1) - row**2 / row.sum(-1, keepdim=True)
 ratio = v.max(-1).values / v.min(-1).values
-print(f"far away: mean v' {float(v.mean()):.0f}, median max/min {float(ratio.median()):.1f}")
+print(
+    f"far away: mean v' {float(v.mean()):.0f}, median max/min "
+    f"{float(ratio.median()):.1f}"
+)
 
 # %% [markdown]
 # Far away, the corrected variances are huge, 4165 on average, but they are

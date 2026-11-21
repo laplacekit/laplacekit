@@ -18,13 +18,20 @@ from torch.utils.data import DataLoader, TensorDataset
 
 import laplacekit as lk
 
-x_np, y_np = make_blobs(n_samples=500, centers=4, cluster_std=1.2, random_state=37)
+x_np, y_np = make_blobs(
+    n_samples=500, centers=4, cluster_std=1.2, random_state=37
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 loader = DataLoader(TensorDataset(x, y), batch_size=100)
 
 torch.manual_seed(0)
 model = nn.Sequential(
-    nn.Linear(2, 20), nn.ReLU(), nn.Linear(20, 20), nn.ReLU(), nn.Dropout(0.1), nn.Linear(20, 4)
+    nn.Linear(2, 20),
+    nn.ReLU(),
+    nn.Linear(20, 20),
+    nn.ReLU(),
+    nn.Dropout(0.1),
+    nn.Linear(20, 4),
 )
 opt = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=5e-4)
 
@@ -70,9 +77,15 @@ print(post)
 
 # %%
 post_all = lk.laplace(model, loader, lk.Categorical(), subset=lk.subsets.all)
-post_kfac = lk.laplace(model, loader, lk.Categorical(), hessian_approx=lk.KFAC())
+post_kfac = lk.laplace(
+    model, loader, lk.Categorical(), hessian_approx=lk.KFAC()
+)
 post_fixed = lk.laplace(
-    model, loader, lk.Categorical(), prior=lk.priors.Isotropic(1.0), hyper_tuner=None
+    model,
+    loader,
+    lk.Categorical(),
+    prior=lk.priors.Isotropic(1.0),
+    hyper_tuner=None,
 )
 print(post_fixed)
 
@@ -89,9 +102,13 @@ print(post_fixed)
 # classifier, those are logits, and `softmax` turns them into probabilities.
 
 # %%
-logits = lk.sample_outputs(post, x[:3], 16, generator=torch.Generator().manual_seed(0))
+logits = lk.sample_outputs(
+    post, x[:3], 16, generator=torch.Generator().manual_seed(0)
+)
 print(logits.shape)
-print(logits.softmax(-1)[:4, 0].round(decimals=3))  # four draws for the first input
+print(
+    logits.softmax(-1)[:4, 0].round(decimals=3)
+)  # four draws for the first input
 
 # %% [markdown]
 # Three of the four draws put the first input in class 3, each with a

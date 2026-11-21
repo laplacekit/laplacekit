@@ -54,6 +54,7 @@ docs/node_modules/.package-lock.json: docs/package-lock.json
 # when its source changed; the others reuse their outputs in docs/_freeze/.
 docs: docs-reference docs/node_modules/.package-lock.json
 	$(QUARTO) render docs
+	$(UV) --group docs python docs/llms_txt.py
 
 # Drops the frozen outputs, so every page re-executes (milestone ends).
 docs-full:

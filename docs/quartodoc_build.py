@@ -1,8 +1,9 @@
 """Run the quartodoc CLI with Google parser options for this repo's docstrings.
 
-A `Returns:` or `Yields:` section here is one value whose text wraps over several
-lines. Griffe's default reads each line as its own value, one table row each, and
-quartodoc has no setting for it, so the options go into its defaults table.
+A `Returns:` or `Yields:` section here is one value whose text wraps over
+several lines. Griffe's default reads each line as its own value, one table row
+each, and quartodoc has no setting for it, so the options go into its defaults
+table.
 """
 
 import quartodoc.parsers

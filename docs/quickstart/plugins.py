@@ -5,7 +5,8 @@
 # ---
 #
 # A plugin is a separate package that adds methods to **laplacekit**. We
-# install `laplacekit-subnet`, which picks a subnetwork of weights for the
+# install
+# [`laplacekit-subnet`](https://github.com/laplacekit/laplacekit/tree/main/plugins/subnet), which picks a subnetwork of weights for the
 # Laplace approximation.
 #
 # ```bash
@@ -22,11 +23,15 @@ from torch import nn
 
 import laplacekit as lk
 
-x_np, y_np = make_blobs(n_samples=500, centers=4, cluster_std=1.2, random_state=37)
+x_np, y_np = make_blobs(
+    n_samples=500, centers=4, cluster_std=1.2, random_state=37
+)
 x, y = torch.tensor(x_np, dtype=torch.float32), torch.tensor(y_np)
 
 torch.manual_seed(0)
-model = nn.Sequential(nn.Linear(2, 20), nn.ReLU(), nn.Linear(20, 20), nn.ReLU(), nn.Linear(20, 4))
+model = nn.Sequential(
+    nn.Linear(2, 20), nn.ReLU(), nn.Linear(20, 20), nn.ReLU(), nn.Linear(20, 4)
+)
 opt = torch.optim.Adam(model.parameters(), lr=1e-2, weight_decay=5e-4)
 
 for _ in range(300):
@@ -36,7 +41,10 @@ for _ in range(300):
 
 model.eval()
 post = lk.laplace(
-    model, [(x, y)], likelihood=lk.Categorical(), subset=lk.subnet.largest_magnitude(100)
+    model,
+    [(x, y)],
+    likelihood=lk.Categorical(),
+    subset=lk.subnet.largest_magnitude(100),
 )
 print(post)
 

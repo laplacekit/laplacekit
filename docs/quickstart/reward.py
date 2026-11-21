@@ -8,6 +8,16 @@
 # and which one a person preferred. Laplace gives each reward an error bar. Our
 # items are points in the cube [-2, 2]³, and a hidden utility of the first two
 # coordinates decides the labels.
+#
+# ::: {.callout-note title="Plugin"}
+# This page uses the
+# [`laplacekit-reward`](https://github.com/laplacekit/laplacekit/tree/main/plugins/reward)
+# plugin. Install it with
+#
+# ```bash
+# pip install "laplacekit[reward]"
+# ```
+# :::
 
 # %%
 import matplotlib.pyplot as plt
@@ -28,7 +38,9 @@ def utility(x):
 
 first, second = 4 * torch.rand(300, 3) - 2, 4 * torch.rand(300, 3) - 2
 p_first = torch.sigmoid(3 * (utility(first) - utility(second)))
-label = (torch.rand(300) > p_first).long()  # the index of the preferred item, 0 = first
+label = (
+    torch.rand(300) > p_first
+).long()  # the index of the preferred item, 0 = first
 
 # %% [markdown]
 # The network scores one item. `lk.reward.pairwise` turns it into a model that
@@ -77,7 +89,9 @@ fig, ax = plt.subplots(figsize=(7, 4))
 ax.axvspan(-2, 2, color="0.93", label="data range")
 ax.plot(t, utility(items), "k--", label="utility")
 ax.plot(t, reward, label="reward")
-ax.fill_between(t, reward - 2 * std, reward + 2 * std, alpha=0.3, label="± 2 std")
+ax.fill_between(
+    t, reward - 2 * std, reward + 2 * std, alpha=0.3, label="± 2 std"
+)
 ax.set_xlabel("first coordinate")
 ax.legend()
 plt.show()

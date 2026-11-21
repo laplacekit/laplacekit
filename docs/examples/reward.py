@@ -103,7 +103,9 @@ transformers.logging.set_verbosity_error()
 transformers.utils.logging.disable_progress_bar()
 datasets.disable_progress_bars()
 huggingface_hub.logging.set_verbosity_error()
-warnings.filterwarnings("ignore", category=FutureWarning)  # deprecation notices from transformers
+warnings.filterwarnings(
+    "ignore", category=FutureWarning
+)  # deprecation notices from transformers
 
 # %% [markdown]
 # ## Model and data
@@ -117,7 +119,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)  # deprecation notices
 # %%
 MODEL = "nicholasKluge/RewardModel"
 MODEL_REV = "914413962bfc33b1b703942b2920bd1b7b6e3b27"
-DATA_REV = "ecfeb1936069f37bee7daffee60cd7765c326a34"  # the data as of August 2023
+DATA_REV = (
+    "ecfeb1936069f37bee7daffee60cd7765c326a34"  # the data as of August 2023
+)
 
 tok = AutoTokenizer.from_pretrained(MODEL, revision=MODEL_REV)
 model = AutoModelForSequenceClassification.from_pretrained(
@@ -125,7 +129,9 @@ model = AutoModelForSequenceClassification.from_pretrained(
 )
 _ = model.eval()
 
-aira = load_dataset("nicholasKluge/reward-aira-dataset", revision=DATA_REV, split="english")
+aira = load_dataset(
+    "nicholasKluge/reward-aira-dataset", revision=DATA_REV, split="english"
+)
 print(aira)
 
 # %% [markdown]
@@ -190,7 +196,9 @@ batches = [preferences(aira.select(range(i, i + 8))) for i in range(0, 32, 8)]
 
 # %%
 fn = lk.reward.pairwise(lk.transformers.sequence_classification(model))
-data = lk.data.from_loader(batches, prepare=lk.reward.prepare_preferences, n_data=len(aira))
+data = lk.data.from_loader(
+    batches, prepare=lk.reward.prepare_preferences, n_data=len(aira)
+)
 
 post = lk.laplace(
     fn,
@@ -227,12 +235,17 @@ print(post)
 # %%
 held = aira.select(range(32, 2000))
 lengths = [
-    len(ids) for ids in tok(list(held["instruction"]), list(held["chosen_response"]))["input_ids"]
+    len(ids)
+    for ids in tok(list(held["instruction"]), list(held["chosen_response"]))[
+        "input_ids"
+    ]
 ]
 short = held.select([i for i, n in enumerate(lengths) if n <= 64][:4])
 
 groups = {
-    "in": list(zip(short["instruction"], short["chosen_response"], strict=True)),
+    "in": list(
+        zip(short["instruction"], short["chosen_response"], strict=True)
+    ),
     "OOD": [
         ("Wie spät ist es?", "Es ist drei Uhr."),
         ("asdf qwer zxcv", "1 2 3 4 5 6 7 8 9"),
@@ -244,15 +257,28 @@ groups = {
 rewards = {}
 
 for name, texts in groups.items():
-    x = tok([p for p, _ in texts], [r for _, r in texts], padding=True, return_tensors="pt")
-    out = lk.predict_outputs(post, x, generator=torch.Generator().manual_seed(0))
-    rewards[name] = (out.mean.squeeze(-1), out.cov.per_input().reshape(-1).sqrt())
+    x = tok(
+        [p for p, _ in texts],
+        [r for _, r in texts],
+        padding=True,
+        return_tensors="pt",
+    )
+    out = lk.predict_outputs(
+        post, x, generator=torch.Generator().manual_seed(0)
+    )
+    rewards[name] = (
+        out.mean.squeeze(-1),
+        out.cov.per_input().reshape(-1).sqrt(),
+    )
 
 print(f"{'':<4} {'reward':>7} {'std':>6}  prompt")
 
 for name, texts in groups.items():
     for (prompt, _), r, s in zip(texts, *rewards[name], strict=True):
-        print(f"{name:<4} {float(r):7.2f} {float(s):6.3f}  {prompt.splitlines()[0][:48]}")
+        print(
+            f"{name:<4} {float(r):7.2f} {float(s):6.3f}  "
+            f"{prompt.splitlines()[0][:48]}"
+        )
 
 for name, (_, s) in rewards.items():
     print(f"mean std, {name}: {float(s.mean()):.3f}")
@@ -284,7 +310,8 @@ ax.legend()
 plt.show()
 
 print(
-    f"correlation of reward and std: {float(torch.corrcoef(torch.stack([r_all, s_all]))[0, 1]):.2f}"
+    "correlation of reward and std: "
+    f"{float(torch.corrcoef(torch.stack([r_all, s_all]))[0, 1]):.2f}"
 )
 
 # %% [markdown]

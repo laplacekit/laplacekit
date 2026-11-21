@@ -64,7 +64,9 @@ huggingface_hub.logging.set_verbosity_error()
 # torch.func's vmap has no batching rule for the fused attention kernel on CPU, so the fit
 # falls back to a slower loop there. The result is the same.
 warnings.filterwarnings(
-    "ignore", message=r"There is a performance drop.*_scaled_dot_product", category=UserWarning
+    "ignore",
+    message=r"There is a performance drop.*_scaled_dot_product",
+    category=UserWarning,
 )
 
 # %% [markdown]
@@ -78,16 +80,26 @@ warnings.filterwarnings(
 # $10^{-4}$ to $0.02$, and the network predicts the noise $\epsilon$.
 
 # %%
-REPO, REVISION = "1aurent/ddpm-mnist", "e6ee37a720cd5c9b48fa5be809e5926f49f38246"
+REPO, REVISION = (
+    "1aurent/ddpm-mnist",
+    "e6ee37a720cd5c9b48fa5be809e5926f49f38246",
+)
 
 with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", message="The `local_dir_use_symlinks`", category=UserWarning)
+    warnings.filterwarnings(
+        "ignore", message="The `local_dir_use_symlinks`", category=UserWarning
+    )
     unet = UNet2DModel.from_pretrained(REPO, revision=REVISION).eval()
     scheduler = DDPMScheduler.from_pretrained(REPO, revision=REVISION)
 
 T = scheduler.config.num_train_timesteps
 print("parameters:", sum(p.numel() for p in unet.parameters()))
-print("prediction:", scheduler.config.prediction_type, "| clips x0:", scheduler.config.clip_sample)
+print(
+    "prediction:",
+    scheduler.config.prediction_type,
+    "| clips x0:",
+    scheduler.config.clip_sample,
+)
 
 # %% [markdown]
 # The data are the 60,000 training images of MNIST[^lecun1998], which
@@ -96,7 +108,9 @@ print("prediction:", scheduler.config.prediction_type, "| clips x0:", scheduler.
 
 # %%
 #| output: false
-mnist = MNIST(Path.home() / ".cache" / "laplacekit" / "mnist", train=True, download=True)
+mnist = MNIST(
+    Path.home() / ".cache" / "laplacekit" / "mnist", train=True, download=True
+)
 
 # %%
 images = mnist.data.unsqueeze(1).float() / 127.5 - 1.0
@@ -125,7 +139,11 @@ loader = torch.utils.data.DataLoader(images[:1000], batch_size=250)
 
 start = time.perf_counter()
 post = lk.diffusers.laplace(
-    unet, scheduler, loader, n_data=len(images), generator=torch.Generator().manual_seed(0)
+    unet,
+    scheduler,
+    loader,
+    n_data=len(images),
+    generator=torch.Generator().manual_seed(0),
 )
 fit_time = time.perf_counter() - start
 
@@ -150,14 +168,18 @@ print(post)
 
 # %%
 def forward(params, inputs):
-    return functional_call(unet, dict(params), (inputs["sample"], inputs["timestep"])).sample
+    return functional_call(
+        unet, dict(params), (inputs["sample"], inputs["timestep"])
+    ).sample
 
 
 def prepare(x0, g, /):
     t = torch.randint(0, T, (len(x0),), generator=g)
     eps = torch.randn(x0.shape, generator=g)
 
-    return lk.Batch({"sample": scheduler.add_noise(x0, eps, t), "timestep": t}, eps)
+    return lk.Batch(
+        {"sample": scheduler.add_noise(x0, eps, t), "timestep": t}, eps
+    )
 
 
 by_hand = lk.laplace(
@@ -167,7 +189,11 @@ by_hand = lk.laplace(
     subset=lk.subsets.last_layer,
     generator=torch.Generator().manual_seed(0),
 )
-print("prior precision:", float(by_hand.prior.prior_precision), float(post.prior.prior_precision))
+print(
+    "prior precision:",
+    float(by_hand.prior.prior_precision),
+    float(post.prior.prior_precision),
+)
 
 # %% [markdown]
 # Both fits get a generator with the same seed, so they draw the same
@@ -224,7 +250,11 @@ print("prior precision:", float(by_hand.prior.prior_precision), float(post.prior
 # %%
 x = torch.randn(4, 1, 28, 28)
 out = lk.predict_outputs(post, {"sample": x, "timestep": torch.tensor(500)})
-print(type(out.cov).__name__, tuple(out.cov.factor.shape), tuple(out.cov.diagonal().shape))
+print(
+    type(out.cov).__name__,
+    tuple(out.cov.factor.shape),
+    tuple(out.cov.diagonal().shape),
+)
 
 # %% [markdown]
 # ## Sampling with a variance
@@ -291,9 +321,15 @@ start = time.perf_counter()
 with torch.no_grad():
     for i, t in enumerate(timesteps):
         ab = alpha_bar[t]
-        ab_next = alpha_bar[timesteps[i + 1]] if i + 1 < len(timesteps) else torch.tensor(1.0)
+        ab_next = (
+            alpha_bar[timesteps[i + 1]]
+            if i + 1 < len(timesteps)
+            else torch.tensor(1.0)
+        )
 
-        eps = lk.predict_outputs(post, {"sample": x, "timestep": torch.tensor(t)})
+        eps = lk.predict_outputs(
+            post, {"sample": x, "timestep": torch.tensor(t)}
+        )
         x0 = (x - (1 - ab).sqrt() * eps.mean) / ab.sqrt()
         m = (x0.abs() <= 1).float()
         inside[t] = float(m.mean())
@@ -324,8 +360,12 @@ fig, axes = plt.subplots(3, 8, figsize=(9, 3.6))
 
 for k in range(8):
     axes[0, k].imshow(x[k, 0], cmap="gray", vmin=-1, vmax=1)
-    axes[1, k].imshow(var[k, 0], cmap="magma", vmin=0, vmax=float(var[:8].max()))
-    axes[2, k].imshow(late[k, 0], cmap="magma", vmin=0, vmax=float(late[:8].max()))
+    axes[1, k].imshow(
+        var[k, 0], cmap="magma", vmin=0, vmax=float(var[:8].max())
+    )
+    axes[2, k].imshow(
+        late[k, 0], cmap="magma", vmin=0, vmax=float(late[:8].max())
+    )
 
 for ax in axes.flat:
     ax.set_axis_off()
@@ -342,12 +382,20 @@ plt.show()
 
 # %%
 a, a_next = alpha_bar[980], alpha_bar[960]
-w_inside = float(((1 - a_next).sqrt() - (a_next / a).sqrt() * (1 - a).sqrt()) ** 2)
+w_inside = float(
+    ((1 - a_next).sqrt() - (a_next / a).sqrt() * (1 - a).sqrt()) ** 2
+)
 w_clipped = float(1 - a_next)
 
-print(f"weight of Var(eps) at t = 980: unclipped {w_inside:.2f}, clipped {w_clipped:.2f}")
+print(
+    f"weight of Var(eps) at t = 980: unclipped {w_inside:.2f}, clipped "
+    f"{w_clipped:.2f}"
+)
 print(f"1 / alpha_bar at t = 980: {float(1 / alpha_bar[980]):,.0f}")
-print("unclipped pixels:", ", ".join(f"t = {t} {inside[t]:.0%}" for t in (980, 780, 500)))
+print(
+    "unclipped pixels:",
+    ", ".join(f"t = {t} {inside[t]:.0%}" for t in (980, 780, 500)),
+)
 
 groups = {
     "never": clipped_at < 0,
@@ -358,7 +406,10 @@ groups = {
 
 for name, where in groups.items():
     share, mean = float(where.float().mean()), float(var[where].mean())
-    print(f"last clipped {name:>14}: {share:4.0%} of pixels, mean variance {mean:.1e}")
+    print(
+        f"last clipped {name:>14}: {share:4.0%} of pixels, mean variance "
+        f"{mean:.1e}"
+    )
 
 # %% [markdown]
 # The full variance looks like speckle and shows no digit. It is set in the
@@ -397,11 +448,25 @@ def ratio(v, a, b):
     return float(v[a].mean() / v[b].mean())
 
 
-print(f"mean pixel variance: all steps {float(var.mean()):.1e}, last five {float(late.mean()):.1e}")
-print(f"strokes / background, last five steps: {ratio(late, stroke, ~stroke):.2f}")
-print(f"strokes / background, Var(eps) at t = 20: {ratio(eps_var_20, stroke, ~stroke):.2f}")
-print(f"background, border / inside: {ratio(late, border & ~stroke, ~border & ~stroke):.2f}")
-print(f"clipped at the last step: {float(last.float().mean()):.1%} of pixels,", end=" ")
+print(
+    f"mean pixel variance: all steps {float(var.mean()):.1e}, last five "
+    f"{float(late.mean()):.1e}"
+)
+print(
+    f"strokes / background, last five steps: {ratio(late, stroke, ~stroke):.2f}"
+)
+print(
+    "strokes / background, Var(eps) at t = 20: "
+    f"{ratio(eps_var_20, stroke, ~stroke):.2f}"
+)
+print(
+    "background, border / inside: "
+    f"{ratio(late, border & ~stroke, ~border & ~stroke):.2f}"
+)
+print(
+    f"clipped at the last step: {float(last.float().mean()):.1%} of pixels,",
+    end=" ",
+)
 print(f"{float(stroke[last].float().mean()):.0%} of them on strokes")
 
 # %% [markdown]
@@ -432,14 +497,19 @@ picks = [*order[:4], *order[-4:]]
 ink = stroke.sum((1, 2, 3)).float()
 corr = float(torch.corrcoef(torch.stack([total, ink]))[0, 1])
 
-print("summed variance, most to least:", [round(float(v), 1) for v in total[order]])
+print(
+    "summed variance, most to least:",
+    [round(float(v), 1) for v in total[order]],
+)
 print(f"correlation with the number of stroke pixels: {corr:.2f}")
 
 fig, axes = plt.subplots(2, 8, figsize=(9, 2.6))
 
 for col, k in enumerate(picks):
     axes[0, col].imshow(x[k, 0], cmap="gray", vmin=-1, vmax=1)
-    axes[1, col].imshow(late[k, 0], cmap="magma", vmin=0, vmax=float(late.max()))
+    axes[1, col].imshow(
+        late[k, 0], cmap="magma", vmin=0, vmax=float(late.max())
+    )
     axes[0, col].set_title(f"{float(total[k]):.1f}", fontsize=9)
 
 for ax in axes.flat:

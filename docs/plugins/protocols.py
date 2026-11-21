@@ -25,7 +25,11 @@ class StudentT(lk.core.Likelihood):
         self.df, self.scale = df, scale
 
     def log_prob(self, f: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        return torch.distributions.StudentT(self.df, f, self.scale).log_prob(y).sum(-1)
+        return (
+            torch.distributions.StudentT(self.df, f, self.scale)
+            .log_prob(y)
+            .sum(-1)
+        )
 
 
 # %% [markdown]

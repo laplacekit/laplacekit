@@ -41,11 +41,15 @@ last = {"2.weight": model[2].weight, "2.bias": model[2].bias}
 
 
 def train(inputs, targets, prior):
-    opt = torch.optim.LBFGS(list(last.values()), max_iter=500, line_search_fn="strong_wolfe")
+    opt = torch.optim.LBFGS(
+        list(last.values()), max_iter=500, line_search_fn="strong_wolfe"
+    )
 
     def closure():
         opt.zero_grad()
-        loss = ((targets - model(inputs)) ** 2).sum() / (2 * 0.3**2) - prior.log_prob(last)
+        loss = ((targets - model(inputs)) ** 2).sum() / (
+            2 * 0.3**2
+        ) - prior.log_prob(last)
         loss.backward()
         return loss
 
@@ -66,12 +70,17 @@ post_2 = lk.laplace(model, d2, likelihood=lik, prior=post_1, hyper_tuner=None)
 # %%
 t = x_test.squeeze()
 fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
-panels = [(post_1, left, "after part 1"), (post_2, ~left, "after part 1, then part 2")]
+panels = [
+    (post_1, left, "after part 1"),
+    (post_2, ~left, "after part 1, then part 2"),
+]
 
 for ax, (posterior, part, name) in zip(axes, panels, strict=True):
     pred = lk.predict(posterior, x_test)
     mean, std = pred.mean.squeeze(), pred.stddev.squeeze()
-    ax.scatter(x[part].squeeze(), y[part].squeeze(), s=8, color="0.5", label="new data")
+    ax.scatter(
+        x[part].squeeze(), y[part].squeeze(), s=8, color="0.5", label="new data"
+    )
     ax.plot(t, mean)
     ax.fill_between(t, mean - 2 * std, mean + 2 * std, alpha=0.3)
     ax.set_title(name)
@@ -98,7 +107,12 @@ std_dense = lk.predict(post_2, x_test).stddev
 
 train(*d1[0], prior)
 kfac_1 = lk.laplace(
-    model, d1, likelihood=lik, prior=prior, hessian_approx=lk.KFAC(), hyper_tuner=None
+    model,
+    d1,
+    likelihood=lik,
+    prior=prior,
+    hessian_approx=lk.KFAC(),
+    hyper_tuner=None,
 )
 
 train(*d2[0], lk.priors.KronSum.of(kfac_1))
