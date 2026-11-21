@@ -40,7 +40,7 @@ def test_filter_is_registered():
     assert "llms-link.lua" in CONFIG["filters"]
 
 
-@pytest.mark.skipif(shutil.which("uv") is None, reason="needs uv for Quarto's pandoc")
+@pytest.mark.skipif(shutil.which("quarto") is None, reason="needs quarto (`make sync`)")
 def test_each_page_links_its_markdown_copy(tmp_path):
     """The filter adds `<link rel="alternate">` to the page's own `.llms.md`."""
 
@@ -50,8 +50,6 @@ def test_each_page_links_its_markdown_copy(tmp_path):
     out = tmp_path / "basics.html"
     subprocess.run(
         [
-            "uv",
-            "run",
             "quarto",
             "pandoc",
             "--standalone",
