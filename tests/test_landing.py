@@ -20,7 +20,7 @@ def tabs() -> dict[str, list[str]]:
     text = INDEX.read_text()
     found = {}
 
-    for title, block in re.findall(r"^## ([^\n]+)\n+```diff\n(.*?)^```", text, re.M | re.S):
+    for title, block in re.findall(r"^### ([^\n]+)\n+```diff\n(.*?)^```", text, re.M | re.S):
         found[title] = [line[2:] for line in block.splitlines() if line.startswith("+")]
 
     return found

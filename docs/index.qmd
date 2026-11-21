@@ -32,9 +32,11 @@ pip install "laplacekit[gp]"
 pip install "laplacekit[marglik]"
 ```
 
+## Examples
+
 ::: {.panel-tabset}
 
-## Classifier
+### Classifier
 
 ```diff
 + import laplacekit as lk
@@ -46,7 +48,7 @@ pip install "laplacekit[marglik]"
 + probs = lk.predict(post, x_test).probs
 ```
 
-## Regression
+### Regression
 
 ```diff
 + import laplacekit as lk
@@ -58,7 +60,7 @@ pip install "laplacekit[marglik]"
 + y_pred, y_std = pred.mean, pred.stddev
 ```
 
-## Language model
+### Language model
 
 ```diff
 + import laplacekit as lk
