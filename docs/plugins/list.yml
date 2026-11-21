@@ -1,0 +1,134 @@
+# The plugin list (index.qmd renders it with list.ejs).
+#
+# title        the distribution name
+# description  what it adds, one sentence
+# categories   one kind from the Overview's "What a plugin can add" table
+# kind         first-party (an extra of laplacekit) or third-party
+# extra        first-party only: the extra that installs it
+# use          the smallest code that uses it
+# guide        the docs page that shows it
+# source       its code
+# paper        optional: the method's paper
+
+- title: laplacekit-transformers
+  description: Laplace-LoRA on Hugging Face causal language models and sequence classifiers.
+  categories: [Library integration]
+  kind: first-party
+  extra: transformers
+  use: |
+    import laplacekit as lk
+
+    post = lk.transformers.laplace_lora(model, train_loader)
+  guide: ../quickstart/llm.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/transformers
+  paper:
+    text: Yang et al., 2024
+    url: https://arxiv.org/abs/2308.13111
+
+- title: laplacekit-diffusers
+  description: Last-layer Laplace on `diffusers` denoisers with DDPM-family schedulers.
+  categories: [Library integration]
+  kind: first-party
+  extra: diffusers
+  use: |
+    import laplacekit as lk
+
+    post = lk.diffusers.laplace(unet, scheduler, train_loader, n_data=60_000)
+  guide: ../quickstart/diffusion.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/diffusers
+  paper:
+    text: Kou et al., 2024
+    url: https://arxiv.org/abs/2310.11142
+
+- title: laplacekit-subnet
+  description: Subnetwork Laplace over random, largest-magnitude or largest-variance weights.
+  categories: [Subset]
+  kind: first-party
+  extra: subnet
+  use: |
+    import laplacekit as lk
+
+    subnet = lk.subnet.largest_magnitude(1000)
+    post = lk.laplace(model, train_loader, likelihood=lk.Categorical(), subset=subnet)
+  guide: ../quickstart/subnetwork.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/subnet
+  paper:
+    text: Daxberger et al., 2021
+    url: https://arxiv.org/abs/2010.14689
+
+- title: laplacekit-heteroscedastic
+  description: Heteroscedastic regression with a Gaussian likelihood in natural parameters.
+  categories: [Likelihood]
+  kind: first-party
+  extra: heteroscedastic
+  use: |
+    import laplacekit as lk
+    from torch import nn
+
+    model = nn.Sequential(body, nn.Linear(32, 2), lk.heteroscedastic.NaturalHead())
+    post = lk.laplace(model, train_loader, likelihood=lk.heteroscedastic.NaturalGaussian())
+  guide: ../quickstart/heteroscedastic.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/heteroscedastic
+  paper:
+    text: Immer et al., 2023
+    url: https://openreview.net/forum?id=A6EquH0enk
+
+- title: laplacekit-reward
+  description: Reward models fit on preference pairs with Bradley–Terry.
+  categories: [Likelihood]
+  kind: first-party
+  extra: reward
+  use: |
+    import laplacekit as lk
+
+    model = lk.reward.pairwise(net)
+    data = lk.data.from_loader(pair_loader, prepare=lk.reward.prepare_pairs)
+    post = lk.laplace(model, data, likelihood=lk.reward.bradley_terry())
+  guide: ../quickstart/reward.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/reward
+  paper:
+    text: Yang et al., 2024
+    url: https://arxiv.org/abs/2402.13210
+
+- title: laplacekit-gp
+  description: "Function-space Laplace at scale: ELLA (Nyström), VaLLA (variational inducing points) and FSP-Laplace (GP priors)."
+  categories: [Function-space approximation]
+  kind: first-party
+  extra: gp
+  use: |
+    import laplacekit as lk
+    import torch
+
+    ella = lk.gp.ELLA(lk.gp.from_data(100), rank=15)
+    gp = lk.function_space.laplace(model, train_loader, lk.Categorical(), method=ella)
+    vgp = lk.function_space.laplace(model, train_loader, lk.Categorical(), method=lk.gp.VaLLA(lk.gp.from_data(50)))
+    vgp = lk.gp.fit_variational(vgp, train_loader, steps=1000, lr=1e-2, learn_prior=False)
+
+    # model: a MAP trained with lk.gp.rkhs_norm
+    prior = lk.gp.FunctionPrior(lk.gp.RBF(torch.tensor(0.3)))
+    fsp = lk.gp.fsp_laplace(model, train_loader, likelihood=lk.Gaussian(), prior=prior, context=lk.gp.grid(-2.0, 2.0, 100), rank=100)
+  guide: ../quickstart/gp.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/gp
+  paper:
+    text: Deng et al., 2022
+    url: https://arxiv.org/abs/2210.12642
+
+- title: laplacekit-marglik
+  description: Marginal-likelihood training, which fits the network, its prior precision and its noise together.
+  categories: [Tuning objective]
+  kind: first-party
+  extra: marglik
+  use: |
+    import laplacekit as lk
+    import torch
+
+    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+    trained = lk.marglik.train(
+        model, train_loader, n_data=60_000, likelihood=lk.Categorical(), optimizer=opt, epochs=100
+    )
+    post = trained.post
+  guide: ../quickstart/marglik.py
+  source: https://github.com/laplacekit/laplacekit/tree/main/plugins/marglik
+  paper:
+    text: Immer et al., 2021
+    url: https://arxiv.org/abs/2104.04975

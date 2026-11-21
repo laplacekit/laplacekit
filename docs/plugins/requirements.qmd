@@ -1,0 +1,82 @@
+---
+title: Requirements and capabilities
+---
+
+**laplacekit** never looks at a model's class or its attribute names to decide
+what to do. It runs the model through autograd and records what works. A
+method says what it needs, and the two are compared before any data goes into
+the fit. A long pass over the data should not end in an error the first batch
+could have shown.
+
+## The probe
+
+`lk.core.probe(model, likelihood, batch, params=...)` runs the model on the first
+two examples of a batch and returns a `Capabilities` object. One forward under
+`no_grad` records `module_order` (the modules that own parameters, in the order
+their forward finished), `hooked` (the `Linear` and `Conv2d` modules whose
+forward hooks fire) and `event_size`, and `tied` lists the tied weights. Then
+it tries `vjp`, `jvp` and `vmap` through `torch.func`, and `vjp_twice`, the
+VJP of a VJP, which must also agree with the plain VJP. Each one is tried on its own, and `caps.failures`
+keeps the first line of each error:
+
+```python
+caps = lk.core.probe(lk.core.ModelFn.from_module(model), lk.Categorical(), batch)
+
+caps.vjp_twice      # False for fused attention kernels
+caps.failures       # {"vjp_twice": "RuntimeError: ..."}
+```
+
+`lk.laplace` probes twice on the first batch: with `subset={}` for the forward
+order, which the subset reads, and then on the chosen parameters only, so the
+rest of the model is never differentiated.
+
+## Requirements
+
+A curvature, a `Staged` method or a predictive states its needs in `requires`:
+
+```python
+@property
+def requires(self) -> lk.core.Requirements:
+    return lk.core.Requirements(vjp=True, vmap=True, needs_output_hessian=True)
+```
+
+The model needs are `vjp`, `vjp_twice`, `jvp`, `vmap` and `hooks` (the module
+types whose forward hooks must fire). `one_of` takes alternatives, at
+least one of which must hold, as the [Predictives](predictive.py) guide uses for "a JVP
+or a VJP". The data needs are `needs_targets`, `weights` and `input_type`. The
+likelihood needs are `needs_sample`, `needs_distribution`,
+`needs_output_hessian` and `late_scale`; the
+[Curvatures](curvature.py#requirements-and-capabilities) guide explains each.
+
+Right after the probe, before the method sees a batch, `lk.laplace` calls
+`caps.check(requires, name)` and `check_likelihood(requires, likelihood,
+name)`. `requires.check_batch` then runs on the first batch, and again on
+every batch the method sees. For an explicit
+`hessian_approx=`, the likelihood check runs before even the first batch is drawn.
+Each failure is a `CapabilityError` that names the method, what is missing, and
+why the probe said no:
+
+```text
+HutchinsonDiag(n_probes=16) needs vjp (RuntimeError: ...), which this model does not support
+```
+
+## What `Requirements` can't say
+
+Some needs aren't capabilities, e.g. "a `Categorical` likelihood only". A
+method gets a `FitContext` in `init` (or `plan`, for `Staged`), before any data,
+and raises `CapabilityError` there. A subset raises `StructureError` or
+`CapabilityError` when it can't select anything, since it also runs before the
+fit. HealthCheck with `isinstance` on a type or a runtime-checkable protocol, never
+with `hasattr`.
+
+Priors follow the same rule. Before the first batch, `lk.laplace` asks the
+hyper tuner to check the prior (`HyperTuner.check`). The built-in tuners check
+`prior.tunable()`: the tensors must be positive and must be leaves of the prior
+itself, else `StructureError`. `lk.GridSearch` with a prior that is not a
+`TunablePrior` raises the same error, also before any data.
+
+::: {.callout-note}
+By hand, `lk.core.fit_curvature(model, likelihood, params, method, capabilities=caps)` always
+checks the likelihood needs, but it checks the model needs only when it gets
+`caps`. Without them, nothing has been probed.
+:::

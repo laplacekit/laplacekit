@@ -1,0 +1,9 @@
+{
+  "name": "laplacekit-docs",
+  "private": true,
+  "description": "Build-time code highlighting for the docs (Quarto post-render).",
+  "type": "module",
+  "dependencies": {
+    "shiki": "4.6.0"
+  }
+}

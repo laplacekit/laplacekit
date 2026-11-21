@@ -1,0 +1,71 @@
+---
+title: Plugin record and health
+---
+
+A plugin registers one record, an `lk.Plugin`, under the entry-point group
+`laplacekit.plugins`. The entry name is the import package:
+
+```toml
+[project.entry-points."laplacekit.plugins"]
+laplacekit_transformers = "laplacekit_transformers:plugin"
+```
+
+The last lines of `laplacekit_transformers` are its checks and its record:
+
+```python
+def health() -> tuple[lk.HealthCheck, ...]:
+    """HealthCheck for `lk.health()` that `transformers` is installed, and `peft` if possible."""
+
+    checks = [_installed("transformers", "error", "required")]
+    checks += [
+        _installed(dist, "warning", f"optional, for {use}") for dist, use in _OPTIONAL.items()
+    ]
+
+    return tuple(checks)
+
+
+plugin = lk.Plugin(supports=">=0.1a0,<0.2", health=health)
+```
+
+That is all the registration there is. Importing a plugin has no side effects
+and changes no defaults, and the record is read only when `lk.plugins()` or
+`lk.health()` runs.
+
+## `supports`
+
+`supports` is a [PEP 440](https://peps.python.org/pep-0440/#version-specifiers)
+specifier set: the **laplacekit** versions the plugin works with.
+Pre-releases count, so `">=0.1a0,<0.2"` takes the current alpha. The API
+changes between minor versions until 1.0, so an upper bound at the next minor
+version is a safe default. A plugin outside its range still loads;
+`lk.plugins()` marks it "not supported" and `lk.health()` reports an error.
+
+## `lk.plugins()`
+
+`lk.plugins()` lists every installed plugin. The name, version and summary
+come from the package metadata (the summary is `description` in
+`pyproject.toml`). Under them come the names in the plugin module's `__all__`,
+each with the first line of its docstring, so that line should say what the
+object is. The record and `health` are left out. A plugin that fails to import
+is listed with the error. [Your first plugin](first.py) prints the list.
+
+## `lk.health()`
+
+`lk.health()` checks the install. It runs the core's checks first (the torch
+version, the `curvlinops` pin, a probe of a small model, float64), then, for
+each plugin, a `supports` check and the plugin's own `health()`.
+
+`health` takes no arguments and returns a tuple of `lk.HealthCheck`. Each check has a
+name, a status and a short detail:
+
+- `"ok"`: works.
+- `"warning"`: works, with something missing, e.g. an optional dependency.
+- `"error"`: broken.
+
+A `health` that raises shows up as one error check naming the exception, so
+`lk.health()` itself never fails because of a plugin. The default `health`
+returns no checks; a plugin without a dependency of its own, such as the one in
+[Your first plugin](first.py), can leave it out. A good check is cheap and
+real: the version of the library the plugin wraps, as `laplacekit-transformers`
+reports, and a fit of a tiny model. [Using a
+plugin](../quickstart/plugins.py) prints a full report.

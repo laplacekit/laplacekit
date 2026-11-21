@@ -1,0 +1,20 @@
+/*-- scss:defaults --*/
+
+// Light mode: slate text on white. Links take the indigo at the cool end of the
+// magma ramp; its magenta is only for the name in prose (brand.scss).
+$lk-color-scheme: light;
+$lk-bg: #FFFFFF;
+$lk-fg: #1F2937;
+$lk-muted: #4B5563;
+$lk-link: #4B3FC0;
+$lk-link-hover: #3A2F99;
+$lk-brand: #A3307A;
+$lk-border: #E5E7EB;
+$lk-surface: #F5F7FA;
+$lk-surface-hover: #EAEEF4;
+
+$lk-note: #4B3FC0;
+$lk-tip: #15803D;
+$lk-warning: #B45309;
+$lk-caution: #C2410C;
+$lk-important: #B91C1C;

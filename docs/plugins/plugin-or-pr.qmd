@@ -1,0 +1,39 @@
+---
+title: Plugin or pull request?
+---
+
+Both routes give a method the same standing, since the built-ins have no
+privileges. The difference is where the code lives and who releases it.
+
+Write a plugin when the method
+
+- brings its own heavy dependency, as `laplacekit-transformers` brings
+  `transformers`. The defaults never depend on what is installed, so
+  **laplacekit** itself only depends on what its built-ins need.
+- is a research method or still experimental, and should move at its own pace,
+  with its own releases.
+- fits the existing protocols. Everything in these pages can be done from
+  outside the repository.
+
+Send a pull request when
+
+- the method belongs in the built-ins and needs no new dependency, for example
+  a simple curvature method that `lk.curvature.default` should be able to pick.
+- it fixes a bug in **laplacekit**.
+- it needs a change in the core: a new protocol, a new operator pair that the
+  priors and predictives must know, or a new capability in the probe. The core
+  is the one part that plugins can't extend, so these always go through a pull
+  request.
+
+## When a plugin becomes first-party
+
+A third-party plugin can become first-party, with an extra
+(`pip install "laplacekit[mylib]"`) and an alias (`lk.mylib`), when
+
+- it wraps a widely used library, so that many users already hold that
+  library's objects;
+- it is small;
+- the **laplacekit** author will run its tests in CI.
+
+The code stays a separate package and keeps importing only the public API. [Overview](overview.qmd) has the full
+comparison.

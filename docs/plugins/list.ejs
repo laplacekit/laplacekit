@@ -1,0 +1,80 @@
+<%
+// The plugin list's entries (list.yml), as markdown: Quarto then renders the
+// tabsets and code blocks like any other, with copy buttons. The install tabs
+// share the group "install", so the tab a reader picks stays picked.
+
+// What pip and uv install: the extra (first-party) or the package (third-party).
+const quoted = (s) => (/[\[ ]/.test(s) ? `"${s}"` : s);
+
+const specs = (item) => [item.extra ? `laplacekit[${item.extra}]` : item.title].map(quoted);
+
+// Shells take one requirement per line; a notebook's %pip takes them on one.
+const shell = (item) => specs(item).join(" \\\n    ");
+const line = (item) => specs(item).join(" ");
+
+const kinds = { "first-party": "First-party", "third-party": "Third-party" };
+%>
+::: {.list}
+<% for (const item of items) { const id = `install-${item.title}`; const req = shell(item); %>
+::: {<%= metadataAttrs(item) %> .plugin-entry}
+
+::: {.plugin-head}
+[`<%= item.title %>`]{.listing-title .plugin-name}
+[<%= kinds[item.kind] %> · <%= item.categories.join(", ") %>]{.plugin-meta}
+<button class="btn btn-sm btn-outline-primary plugin-install" type="button" data-bs-toggle="collapse" data-bs-target="#<%= id %>" aria-expanded="false" aria-controls="<%= id %>">Install</button>
+:::
+
+[<%= item.description %>]{.listing-description}
+
+[Guide](<%= item.guide %>) · [Source](<%= item.source %>)<% if (item.paper) { %> · [<%= item.paper.text %>](<%= item.paper.url %>)<% } %>
+
+::: {.collapse .plugin-panel #<%= id %>}
+
+::: {.panel-tabset group="install"}
+
+## uv
+
+In a uv project. This also adds it to `pyproject.toml`.
+
+```bash
+uv add <%= req %>
+```
+
+## pip
+
+In the virtual environment that has **laplacekit**.
+
+```bash
+pip install <%= req %>
+```
+
+## conda
+
+In the conda environment that has **laplacekit**, through pip.
+
+```bash
+conda activate myenv
+pip install <%= req %>
+```
+
+## Jupyter
+
+In a notebook cell. Restart the kernel afterwards.
+
+```bash
+%pip install <%= line(item) %>
+```
+
+:::
+
+Then:
+
+```python
+<%= item.use %>
+```
+
+:::
+
+:::
+<% } %>
+:::

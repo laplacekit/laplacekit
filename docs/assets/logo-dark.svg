@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+<style>.ink{fill:#E6EDF3}.l0{fill:#A3307A}.l1{fill:#FB8861}.l2{fill:#FCFDBF}</style>
+<rect class="ink" x="0" y="0" width="56" height="56" rx="10"/>
+<rect class="ink" x="72" y="0" width="56" height="56" rx="10"/>
+<rect class="ink" x="0" y="72" width="56" height="56" rx="10"/>
+<ellipse class="l0" cx="100" cy="100" rx="32.44" ry="22.71" transform="rotate(-45 100 100)"/>
+<ellipse class="l1" cx="100" cy="100" rx="18.49" ry="12.94" transform="rotate(-45 100 100)"/>
+<circle class="l2" cx="100" cy="100" r="5.5"/>
+</svg>

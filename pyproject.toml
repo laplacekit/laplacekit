@@ -1,0 +1,158 @@
+[project]
+name = "laplacekit"
+version = "0.1a0"
+description = "Extensible, modern Laplace-approximation library for PyTorch, built on a plugin system."
+readme = "README.md"
+authors = [{ name = "Agustinus Kristiadi", email = "agustinus@kristia.de" }]
+license = "MIT"
+requires-python = ">=3.13"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "curvlinops-for-pytorch==3.0.1",
+    "packaging>=24",
+    "torch >= 2.15",
+]
+
+[project.optional-dependencies]
+transformers = ["laplacekit-transformers"]
+diffusers = ["laplacekit-diffusers"]
+subnet = ["laplacekit-subnet"]
+heteroscedastic = ["laplacekit-heteroscedastic"]
+reward = ["laplacekit-reward"]
+gp = ["laplacekit-gp"]
+marglik = ["laplacekit-marglik"]
+all = [
+  "laplacekit-transformers",
+  "laplacekit-diffusers",
+  "laplacekit-subnet",
+  "laplacekit-heteroscedastic",
+  "laplacekit-reward",
+  "laplacekit-gp",
+  "laplacekit-marglik",
+]
+
+[project.urls]
+Homepage = "https://laplacekit.org"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "ty>=0.0.104",
+  "ruff>=0.14",
+  "import-linter>=2.1",
+  "laplacekit-transformers",
+  "laplacekit-diffusers",
+  "laplacekit-subnet",
+  "laplacekit-heteroscedastic",
+  "laplacekit-reward",
+  "laplacekit-gp",
+  "laplacekit-marglik",
+  "transformers>=5.23.0",
+  "diffusers>=0.43.0",
+  "peft>=0.21.3",
+  "pyyaml>=6",
+  "quartodoc>=0.9",
+  "griffe<2",
+]
+docs = [
+  "quarto-cli>=1.10",
+  "quartodoc>=0.9",
+  "griffe<2",
+  "ipykernel>=6",
+  "matplotlib>=3.9",
+  "jupyter-cache>=1",
+  "pyyaml>=6",
+  "nbformat>=5",
+  "nbclient>=0.10",
+  "scikit-learn>=1.9.1",
+  "laplacekit-transformers",
+  "laplacekit-diffusers",
+  "laplacekit-subnet",
+  "laplacekit-heteroscedastic",
+  "laplacekit-reward",
+  "laplacekit-gp",
+  "laplacekit-marglik",
+  "laplacekit-example",
+  "peft>=0.21.3",
+  "diffusers>=0.43.0",
+  "torchvision>=0.29.1",
+  "datasets>=5.2.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.workspace]
+members = ["plugins/*"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+laplacekit-transformers = { workspace = true }
+laplacekit-diffusers = { workspace = true }
+laplacekit-subnet = { workspace = true }
+laplacekit-heteroscedastic = { workspace = true }
+laplacekit-reward = { workspace = true }
+laplacekit-gp = { workspace = true }
+laplacekit-marglik = { workspace = true }
+# The docs' example plugin lives in its own repository, a template for new plugins.
+laplacekit-example = { git = "https://github.com/laplacekit/laplacekit-plugin-example" }
+
+[tool.ty.src]
+include = ["src", "plugins/transformers/src", "plugins/diffusers/src", "plugins/subnet/src", "plugins/heteroscedastic/src", "plugins/reward/src", "plugins/gp/src", "plugins/marglik/src"] # tests/typing holds deliberate errors; test_typing_gate checks it
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "TID251", "D"]
+# D100: module docstrings exist, but plugins' private modules vary. D105, D107: dunders and
+# `__init__` are covered by the class docstring. D202: the house style puts a blank line
+# after a function's docstring.
+ignore = ["D100", "D105", "D107", "D202"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Frozen dataclasses, safe as argument defaults (B008).
+extend-immutable-calls = ["laplacekit_transformers.tasks.CausalLM"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"torch.utils._pytree".msg = "Import pytree helpers strategy laplacekit.core._pytree only."
+"curvlinops".msg = "Only the Curvlinops adapter (laplacekit.curvlinops) imports curvlinops."
+
+[tool.ruff.lint.per-file-ignores]
+"src/laplacekit/core/_pytree.py" = ["TID251"]
+"src/laplacekit/curvlinops.py" = ["TID251"]
+"tests/test_curvlinops.py" = ["TID251"]  # compares the adapter with Curvlinops itself
+"docs/examples/*.py" = ["E402", "E501"]  # prose cells hold LaTeX and tables
+"docs/quickstart/*.py" = ["E402", "E501"]
+"docs/plugins/*.py" = ["E402", "E501"]
+"tests/**" = ["D"]
+"plugins/*/tests/**" = ["D"]
+"docs/**" = ["D"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "plugins/transformers/tests", "plugins/diffusers/tests", "plugins/subnet/tests", "plugins/heteroscedastic/tests", "plugins/reward/tests", "plugins/gp/tests", "plugins/marglik/tests"]
+norecursedirs = ["tests/typing"]
+filterwarnings = [
+  # torch's own torch._decomp calls torch.jit.script on the first forward-mode AD call, which
+  # warns on Python 3.14+. Not our code; the probe silences the same warning around its jvp.
+  "ignore:`torch.jit.script` is not supported:FutureWarning:torch.jit._script",
+]

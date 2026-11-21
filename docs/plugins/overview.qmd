@@ -1,0 +1,70 @@
+---
+title: Overview
+---
+
+A plugin is a Python package that adds something to **laplacekit**: a curvature,
+a prior, a likelihood, a way to pick parameters, or a front door for another
+library's models. Users install it and pass its objects where a built-in would
+go:
+
+```python
+import laplacekit as lk
+
+post = lk.laplace(
+    model, loader, likelihood=lk.Categorical(), subset=lk.subnet.largest_magnitude(1000)
+)
+```
+
+## Do you need one?
+
+Often not. `lk.laplace` takes any object with the right methods, so a
+likelihood or a subset defined in your own script works as it is. [Custom
+likelihood](../quickstart/likelihoods.py) does exactly that. You need a plugin
+when other people should be able to `pip install` your method, or when you want
+it tested and versioned on its own.
+
+## What a plugin can add
+
+Each kind of contribution is a protocol in `laplacekit.core`. There is no base
+class to inherit from, and `lk.laplace` never looks anything up by name: an
+object with the right methods is accepted. If protocols are new to you, read [Protocols
+in one page](protocols.py) first. The entry point a package declares
+only lists it in `lk.plugins()` and `lk.health()`.
+
+| Kind | Protocol | Where it goes |
+| --- | --- | --- |
+| [A subset](subset.py) | `Subset` | `lk.laplace(..., subset=)` |
+| [A prior](prior.py) | `Prior`, `TunablePrior` | `lk.laplace(..., prior=)` |
+| [A tuning objective](objective.py) | `Objective` | `lk.Minimize`, `lk.GridSearch` |
+| [A likelihood](likelihood.py) | `Likelihood` | `lk.laplace(..., likelihood=)` |
+| [A predictive](predictive.py) | `Predictive` | `lk.predict(post, x, method)` |
+| [A curvature](curvature.py) | `Curvature`, `Staged` | `lk.laplace(..., hessian_approx=)` |
+| [A function-space approximation](function_space.py) | `function_space.FunctionSpaceMethod` | `lk.function_space.laplace(..., method=)` |
+| [A library integration](integration.py) | the above, plus a `ModelFn` | its own front door, e.g. `lk.diffusers.laplace` |
+
+The rows go from the smallest contract to the largest. [Your first
+plugin](first.py) starts at the top, with a subset, and ships it as a package.
+Each row links to its guide, with a worked example and its test.
+
+## First-party and third-party
+
+Some plugins are first-party: the **laplacekit** author curates them as part of
+**laplacekit**, and they come with an extra and an `lk.` alias. The rest are
+third-party: anyone can publish one from their own repository. Mechanically the
+two are the same:
+
+| | First-party | Third-party |
+| --- | --- | --- |
+| Examples | `laplacekit-transformers`, `laplacekit-diffusers`, `laplacekit-subnet`, `laplacekit-heteroscedastic`, `laplacekit-reward`, `laplacekit-gp`, `laplacekit-marglik` | none listed yet |
+| Curated with **laplacekit** | yes | no |
+| Package | its own | its own |
+| May import | `laplacekit` and `laplacekit.core` only | the same |
+| Registers under `laplacekit.plugins` | yes | yes |
+| Install | `pip install "laplacekit[transformers]"` | `pip install` with the package's name |
+| Reached as | `lk.transformers` | an import of the package |
+
+Apart from curation, only the last two rows differ, and both are
+conveniences: a first-party plugin can do nothing a third-party one can't. [Plugin or pull
+request?](plugin-or-pr.qmd) says when a plugin becomes first-party.
+
+The [plugin list](index.qmd) shows the plugins we know of.

@@ -1,0 +1,480 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - why.qmd
+    - quickstart/*.py
+    - examples/*.py
+    - plugins/*.py
+    - plugins/*.qmd
+    - reference/*.qmd
+  # Re-highlight the code blocks with Shiki (`npm ci --prefix docs` first).
+  post-render: node shiki/highlight.mjs
+
+# Sets **laplacekit** in prose like the wordmark.
+filters:
+  - brand.lua
+  - tables.lua
+
+# A page re-executes only when its source changed; `make docs-full` re-runs all.
+execute:
+  freeze: auto
+  # Library warnings (torch on newer Pythons, say) print local paths; keep them off the site.
+  warning: false
+
+website:
+  site-url: https://laplacekit.org
+  title: laplacekit
+  favicon: assets/favicon.svg
+  navbar:
+    # The wordmark is the logo and the name in one SVG, so the text title is off.
+    title: false
+    logo:
+      light:
+        path: assets/wordmark-light.svg
+        alt: laplacekit
+      dark:
+        path: assets/wordmark-dark.svg
+        alt: laplacekit
+    left:
+      - text: Home
+        href: index.qmd
+      - text: Quickstart
+        href: quickstart/basics.py
+      - text: In depth
+        href: examples/classification.py
+      - text: Plugins
+        href: plugins/index.qmd
+      - text: Reference
+        href: reference/index.qmd
+      - text: Why laplacekit
+        href: why.qmd
+    right:
+      - icon: github
+        href: https://github.com/laplacekit/laplacekit
+        aria-label: GitHub
+  # One sidebar per section; a page shows the one that lists it. The Reference
+  # sidebar is written by quartodoc (see `metadata-files`).
+  sidebar:
+    - id: quickstart
+      title: Quickstart
+      style: floating
+      contents:
+        - section: Start
+          contents:
+            - text: Basics
+              href: quickstart/basics.py
+        - section: Models
+          contents:
+            - text: Classification
+              href: quickstart/classification.py
+            - text: Regression
+              href: quickstart/regression.py
+            - text: Heteroscedastic regression
+              href: quickstart/heteroscedastic.py
+            - text: Language models
+              href: quickstart/llm.py
+            - text: Reward models
+              href: quickstart/reward.py
+            - text: Diffusion models
+              href: quickstart/diffusion.py
+        - section: Methods
+          contents:
+            - text: Function space
+              href: quickstart/function_space.py
+            - text: GP methods
+              href: quickstart/gp.py
+            - text: Marglik training
+              href: quickstart/marglik.py
+            - text: Subnetworks
+              href: quickstart/subnetwork.py
+            - text: Continual learning
+              href: quickstart/continual.py
+        - section: Extending
+          contents:
+            - text: Custom likelihood
+              href: quickstart/likelihoods.py
+            - text: Using a plugin
+              href: quickstart/plugins.py
+    - id: in-depth
+      title: In depth
+      contents:
+        - section: Basics
+          contents:
+            - text: Classification
+              href: examples/classification.py
+            - text: Regression
+              href: examples/regression.py
+            - text: Heteroscedastic regression
+              href: examples/heteroscedastic.py
+            - text: Choosing a curvature
+              href: examples/curvature.py
+        - section: Models
+          contents:
+            - text: Language models
+              href: examples/llm.py
+            - text: Reward models
+              href: examples/reward.py
+            - text: Diffusion models
+              href: examples/diffusion.py
+        - section: Methods
+          contents:
+            - text: Function space
+              href: examples/function_space.py
+            - text: Nyström and variational GPs
+              href: examples/scalable_gp.py
+            - text: Function-space priors
+              href: examples/fsp.py
+            - text: Marginal-likelihood training
+              href: examples/marglik.py
+            - text: Subnetworks
+              href: examples/subnetwork.py
+            - text: Continual learning
+              href: examples/continual.py
+        - section: Under the hood
+          contents:
+            - text: Step by step
+              href: examples/by_hand.py
+    - id: plugins
+      title: Plugins
+      contents:
+        - section: Using plugins
+          contents:
+            - text: Plugin list
+              href: plugins/index.qmd
+        - section: Writing plugins
+          contents:
+            - text: Overview
+              href: plugins/overview.qmd
+            - text: Protocols in one page
+              href: plugins/protocols.py
+            - text: Your first plugin
+              href: plugins/first.py
+        - section: Guides
+          contents:
+            - text: A subset
+              href: plugins/subset.py
+            - text: A prior
+              href: plugins/prior.py
+            - text: A tuning objective
+              href: plugins/objective.py
+            - text: A likelihood
+              href: plugins/likelihood.py
+            - text: A predictive
+              href: plugins/predictive.py
+            - text: A curvature
+              href: plugins/curvature.py
+            - text: A function-space approximation
+              href: plugins/function_space.py
+            - text: A library integration
+              href: plugins/integration.py
+        - section: Concepts
+          contents:
+            - text: Requirements and capabilities
+              href: plugins/requirements.qmd
+            - text: Statistics
+              href: plugins/statistics.qmd
+            - text: Immutability and pytrees
+              href: plugins/pytrees.qmd
+            - text: Differentiability
+              href: plugins/gradients.qmd
+            - text: Several processes
+              href: plugins/processes.qmd
+        - section: Shipping
+          contents:
+            - text: Testing
+              href: plugins/testing.qmd
+            - text: Plugin record and health
+              href: plugins/record.qmd
+            - text: Publishing
+              href: plugins/publishing.qmd
+            - text: Plugin or pull request?
+              href: plugins/plugin-or-pr.qmd
+
+metadata-files:
+  - reference/_sidebar.yml
+
+format:
+  html:
+    theme:
+      light: [cosmo, assets/theme.scss, assets/theme-light.scss, assets/brand.scss]
+      dark: [cosmo, assets/theme.scss, assets/theme-dark.scss, assets/brand.scss]
+    highlight-style:
+      light: arrow-light
+      dark: arrow-dark
+    toc: true
+    # Light or dark follows the system setting, with no switch (assets/color-scheme.html).
+    respect-user-color-scheme: true
+    # MathJax's font must be set before Quarto loads it (assets/mathjax.html).
+    include-in-header:
+      - assets/color-scheme.html
+      - assets/mathjax.html
+
+quartodoc:
+  package: laplacekit
+  parser: google
+  dir: reference
+  title: Reference
+  sidebar:
+    file: reference/_sidebar.yml
+    title: Reference
+  sections:
+    - title: Everyday
+      desc: What a fit needs, from the model to the predictive.
+    - subtitle: Fit and predict
+      contents:
+        - laplace
+        - predict
+        - predict_outputs
+        - sample_outputs
+        - save
+        - load
+    - subtitle: Likelihoods
+      contents:
+        - Categorical
+        - Bernoulli
+        - Gaussian
+    - subtitle: Priors
+      contents:
+        - priors.Isotropic
+        - priors.Diagonal
+        - priors.Layerwise
+        - priors.KronSum
+        - priors.LowRankSum
+    - subtitle: Subsets
+      contents:
+        - subsets.all
+        - subsets.trainable
+        - subsets.last_layer
+        - subsets.named
+        - subsets.from_mask
+    - subtitle: Subnetworks
+      desc: The `laplacekit-subnet` plugin, reached as `lk.subnet`.
+      contents:
+        - name: laplacekit_subnet
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+    - subtitle: Heteroscedastic regression
+      desc: The `laplacekit-heteroscedastic` plugin, reached as `lk.heteroscedastic`.
+      contents:
+        - name: laplacekit_heteroscedastic
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+    - subtitle: Reward models
+      desc: The `laplacekit-reward` plugin, reached as `lk.reward`.
+      contents:
+        - name: laplacekit_reward
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+    - subtitle: Curvature
+      contents:
+        - DiagGGN
+        - DenseGGN
+        - DenseHessian
+        - LowRankGGN
+        - KFAC
+        - per_block
+        - curvature.default
+    - subtitle: Predictive
+      contents:
+        - Linearized
+        - predictive.Exact
+        - WeightSamples
+        - MC
+        - Probit
+        - Bridge
+    - subtitle: Tuning
+      contents:
+        - tune
+        - MarginalLikelihood
+        - Minimize
+        - GridSearch
+        - name: tuning.HyperTuner
+          members: [__call__, check]
+        - objectives.neg_log_marglik
+        - objectives.predictive_nll
+        - objectives.brier
+        - objectives.ece
+    - subtitle: Function space
+      desc: Function-space (GP) Laplace, as `laplacekit.function_space`.
+      contents:
+        - function_space.laplace
+        - function_space.SubsetOfData
+        - function_space.SubsetGP
+        - function_space.FunctionSpaceMethod
+        - function_space.rows_of
+        - function_space.is_shared
+        - function_space.jacobian
+        - function_space.cov_rows
+    - subtitle: GP methods
+      desc: The `laplacekit-gp` plugin, reached as `lk.gp`.
+      contents:
+        - name: laplacekit_gp
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin, Kernel]
+        - name: laplacekit_gp.Kernel
+          package: null
+          signature_name: short
+          members: [__call__]
+    - subtitle: Marglik training
+      desc: The `laplacekit-marglik` plugin, reached as `lk.marglik`.
+      contents:
+        - name: laplacekit_marglik
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+    - subtitle: Library integrations
+      desc: Plugin packages, reached as `lk.transformers` and `lk.diffusers`.
+      contents:
+        - name: laplacekit_transformers
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+        - name: laplacekit_diffusers
+          package: null
+          signature_name: short
+          include_imports: true
+          exclude: [lk, plugin]
+    - subtitle: Plugins and health
+      contents:
+        - plugins
+        - health
+    - title: Building blocks
+      desc: The contracts and machinery that plugins and by-hand fits use.
+    - subtitle: Fitting by hand
+      contents:
+        - core.fit_curvature
+        - core.run
+        - core.chain
+        - core.CurvatureFit
+        - core.Staged
+        - core.StagedCurvatureFit
+        - core.Pass
+        - core.Running
+        - core.Done
+        - core.Finished
+        - core.FitContext
+        - core.FitStat
+    - subtitle: Data and models
+      desc: "`Params` is the type alias `Mapping[str, Tensor]`: parameters by name."
+      contents:
+        - data.from_loader
+        - data.as_data
+        - name: data.Data
+          members: [__call__, n_data]
+        - Batch
+        - core.spawn_generator
+        - core.generator_for_batch
+        - core.ModelFn
+        - core.Selection
+        - core.select
+        - name: core.Subset
+          members: [__call__]
+        - distributed.all_reduce
+    - subtitle: Posteriors
+      desc: "`Posterior` is the type alias `WeightPosterior | FunctionPosterior`."
+      contents:
+        - core.Prior
+        - core.PriorWithCovariance
+        - core.WeightPosterior
+        - core.HasCovMany
+        - core.HasVersions
+        - LaplacePosterior
+        - core.FunctionPosterior
+        - core.OutputGaussian
+        - core.Layout
+        - core.TunablePrior
+        - core.HasExpand
+    - subtitle: Covariances
+      contents:
+        - core.OutputCov
+        - core.SampleCov
+        - core.FactorCov
+        - core.PerInputCov
+    - subtitle: Curvature contracts
+      desc: "`HessianApprox[Op]` is the type alias `Curvature[Any, Op] | Staged[Op]`: what `hessian_approx=` takes."
+      contents:
+        - core.Curvature
+        - name: core.Stat
+          members: [__add__, scaled, total_weight]
+        - core.HasTemplate
+        - core.Operator
+        - core.Diag
+        - core.Dense
+        - core.with_eigen
+        - core.KronEigenbasis
+        - core.BlockDiag
+        - core.Joint
+        - core.LowRankPlusDiag
+        - core.HasBlocks
+    - subtitle: Likelihood contracts
+      contents:
+        - core.Likelihood
+        - core.HasDistribution
+        - core.HasSample
+        - core.HasOutputHessian
+        - core.OutputHessian
+        - core.HasDefaultLink
+        - core.HasSampleAverage
+        - core.HasMask
+        - core.HasOutputCheck
+        - core.HasTargetCheck
+        - core.LateLikelihood
+        - likelihoods.from_log_prob
+    - subtitle: Predictive contracts
+      contents:
+        - name: core.Predictive
+          members: [__call__, requires]
+        - name: core.LinkApprox
+          members: [__call__, supports]
+        - core.mean_outputs
+    - subtitle: Requirements and errors
+      contents:
+        - core.Requirements
+        - core.Capabilities
+        - core.probe
+        - CapabilityError
+        - StructureError
+        - core.exact_fits
+        - core.resolve_strategy
+        - core.check_outputs_args
+        - core.is_transformed
+    - subtitle: Pytrees
+      contents:
+        - core.pytree
+        - core.static
+        - core.as_pytree
+        - core.hyperparameters
+        - core.HasPrior
+        - core.HasLikelihood
+        - core.TunableLikelihood
+        - core.detach_leaves
+        - core.replace_leaves
+    - subtitle: Plugin records
+      contents:
+        - Plugin
+        - PluginInfo
+        - Plugins
+        - HealthCheck
+        - HealthReport
+    - subtitle: Testing plugins
+      desc: Conformance checks for plugin authors.
+      contents:
+        - testing.check_curvature
+        - testing.check_prior
+        - testing.check_likelihood
+        - testing.check_link
+        - testing.check_subset
+        - testing.check_objective
+        - testing.check_predictive

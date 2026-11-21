@@ -1,0 +1,41 @@
+/*-- scss:rules --*/
+
+// The name in prose, set bold in the wordmark face by brand.lua: "laplace" in
+// the text colour, "kit" in the brand colour. The face is a subset (a-z, Bold)
+// of Monaspace Xenon, renamed as its licence asks for modified versions
+// (fonts/OFL.txt).
+//
+// Quarto resolves the URLs from the project root and copies the files.
+
+@font-face {
+  font-family: "laplacekit wordmark";
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/wordmark-700.woff2") format("woff2");
+}
+
+.brand {
+  font-family: "laplacekit wordmark", $font-family-monospace;
+  font-weight: 700;
+  font-size: 0.94em;
+  white-space: nowrap;
+}
+
+.brand strong {
+  color: $lk-brand;
+}
+
+// The landing page sets the mark before the name in its title, in the
+// wordmark's proportions: a 28 px mark, a 10 px gap, and 20 px text whose
+// baseline sits 7.8 px above the mark's bottom.
+.brand-mark {
+  height: 1.4em;
+  width: auto;
+  margin-right: 0.5em;
+  vertical-align: -0.39em;
+}
+
+// The navbar shows the wordmark (logo and name in one SVG) at the text's height.
+.navbar-brand .navbar-logo {
+  max-height: 32px;
+}

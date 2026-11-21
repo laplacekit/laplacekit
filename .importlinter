@@ -1,0 +1,48 @@
+[importlinter]
+root_packages =
+    laplacekit
+    laplacekit_transformers
+    laplacekit_diffusers
+    laplacekit_subnet
+    laplacekit_heteroscedastic
+    laplacekit_reward
+    laplacekit_gp
+    laplacekit_marglik
+include_external_packages = True
+
+[importlinter:contract:builtins-use-core-public-api]
+name = Built-ins import only the public laplacekit.core API
+type = forbidden
+source_modules =
+    laplacekit.curvature
+    laplacekit.function_space
+    laplacekit.curvlinops
+    laplacekit.likelihoods
+    laplacekit.priors
+    laplacekit.predictive
+    laplacekit.subsets
+    laplacekit.objectives
+    laplacekit.front
+    laplacekit.data
+    laplacekit.distributed
+    laplacekit.tuning
+    laplacekit.testing
+    laplacekit._health
+forbidden_modules =
+    laplacekit.core.*
+allow_indirect_imports = true
+
+[importlinter:contract:plugins-use-public-api]
+name = Plugin packages import only the public laplacekit and laplacekit.core API
+type = forbidden
+source_modules =
+    laplacekit_transformers
+    laplacekit_diffusers
+    laplacekit_subnet
+    laplacekit_heteroscedastic
+    laplacekit_reward
+    laplacekit_gp
+    laplacekit_marglik
+forbidden_modules =
+    laplacekit.core.*
+allow_indirect_imports = true

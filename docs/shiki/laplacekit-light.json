@@ -1,0 +1,108 @@
+{
+  "name": "laplacekit-light",
+  "type": "light",
+  "colors": {
+    "editor.background": "#F5F7FA",
+    "editor.foreground": "#1F2937"
+  },
+  "tokenColors": [
+    {
+      "name": "comment",
+      "scope": [
+        "comment",
+        "punctuation.definition.comment",
+        "meta.diff.header",
+        "meta.diff.range"
+      ],
+      "settings": {
+        "foreground": "#556070",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "keyword",
+      "scope": [
+        "keyword",
+        "storage.type",
+        "storage.modifier",
+        "keyword.operator.logical",
+        "keyword.operator.unpacking"
+      ],
+      "settings": {
+        "foreground": "#2459A8"
+      }
+    },
+    {
+      "name": "operator",
+      "scope": [
+        "keyword.operator",
+        "punctuation.separator.annotation"
+      ],
+      "settings": {
+        "foreground": "#475569"
+      }
+    },
+    {
+      "name": "function",
+      "scope": [
+        "entity.name.function",
+        "meta.function-call.generic",
+        "support.function",
+        "entity.name.type",
+        "entity.other.inherited-class",
+        "support.type",
+        "entity.name.command"
+      ],
+      "settings": {
+        "foreground": "#6D28D9"
+      }
+    },
+    {
+      "name": "attribute",
+      "scope": [
+        "meta.attribute",
+        "support.type.property-name",
+        "entity.name.tag",
+        "variable.other.property",
+        "entity.other.attribute-name"
+      ],
+      "settings": {
+        "foreground": "#0E7490"
+      }
+    },
+    {
+      "name": "parameter",
+      "scope": [
+        "variable.parameter",
+        "constant.other.option"
+      ],
+      "settings": {
+        "foreground": "#B45309"
+      }
+    },
+    {
+      "name": "string",
+      "scope": [
+        "string",
+        "punctuation.definition.string",
+        "markup.inserted"
+      ],
+      "settings": {
+        "foreground": "#15803D"
+      }
+    },
+    {
+      "name": "constant",
+      "scope": [
+        "constant.numeric",
+        "constant.language",
+        "constant.character",
+        "variable.language",
+        "markup.deleted"
+      ],
+      "settings": {
+        "foreground": "#BE123C"
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+[project]
+name = "laplacekit-transformers"
+version = "0.1a0"
+description = "Hugging Face transformers presets for laplacekit: Laplace-LoRA on causal language models and sequence classifiers"
+authors = [{ name = "Agustinus Kristiadi", email = "agustinus@kristia.de" }]
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = [
+    "laplacekit>=0.1a0,<0.2",
+    "transformers>=5.23.0",
+]
+
+[project.optional-dependencies]
+peft = ["peft>=0.21.3"]
+
+[project.entry-points."laplacekit.plugins"]
+laplacekit_transformers = "laplacekit_transformers:plugin"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+laplacekit = { workspace = true }

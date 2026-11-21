@@ -1,0 +1,87 @@
+---
+title: Statistics
+---
+
+A curvature folds the data into a statistic, one batch at a time, and turns
+the statistic into an operator at the end. Two rules make this work:
+statistics are monoids, and `finalize` returns an average.
+
+## Monoids
+
+A statistic satisfies the `Stat` protocol:
+
+```python
+class Stat(Protocol):
+    @property
+    def total_weight(self) -> Tensor: ...
+
+    def __add__(self, other: Self, /) -> Self: ...
+
+    def scaled(self, s: Tensor, /) -> Self: ...
+```
+
+`init` returns the identity, so $\mathrm{init} + a = a$, and `+` combines two
+statistics. Folding two lists of batches one after the other must give the
+same result as folding each one from `init` and adding:
+
+$$
+  \mathrm{fold}(a \mathbin{+\!\!+} b) = \mathrm{fold}(a) + \mathrm{fold}(b) .
+$$
+
+For a statistic without random draws, this means that the batch size and the
+grouping of the data don't matter. **laplacekit** uses the law to stream the
+data, to resume a fit, and to add the statistics of [several
+processes](processes.qmd). For a sum, `SumStat(sum, weight)` keeps
+one running sum per block and the total weight, and it is often all a
+curvature needs.
+
+A method that draws random numbers takes them from the `torch.Generator` it
+gets in `update`. The fit seeds that generator from its own seed, the pass and
+the count of examples before the batch, so a batch gets the same draws every
+time the fit sees it at the same place. The law then holds exactly for a fixed
+list of batches, e.g. when we resume a fit, and `check_curvature` tests it that
+way. Batching the data differently changes the generators, and so does
+splitting it across processes, where each rank counts its own examples and the
+rank is part of the seed. The draws then differ, though the estimate is of the
+same quantity.
+
+If the statistic is a sum, `scaled(s)` multiplies it by `s`. A statistic that
+merges but isn't a sum, say the top $M$ entries, sets
+`Requirements(additive_stat=False)`.
+
+## Averages and `n_data`
+
+`finalize` returns the per-example average $G$, not the sum $N G$. In
+practice, this means dividing by `stat.total_weight`. The posterior multiplies by
+`n_data`, the effective data size $N$, when it forms the precision
+$\Lambda_0 + N G$. `lk.laplace` takes $N$ from the data's `n_data` when it is
+known, and from the count of examples seen otherwise. Since $N$ and the prior
+enter only after the fold, changing them, e.g. while tuning the prior
+precision, never touches the data again.
+
+`lk.testing.check_curvature` tests all of this: `init` is the identity, the
+monoid law on real batches, and that multiplying every example weight by 3
+leaves `finalize` unchanged, which is what returning an average means.
+
+## Several passes
+
+Some methods need a pass over the data before they know what to collect in
+the next one, for example one that estimates an eigenbasis first and then
+refits the eigenvalues in it. Such a method is `Staged`: it has `requires` and
+`plan(params, ctx)`, which returns a chain of passes. Each pass is a
+`Curvature`, and `chain(curvature, then=...)` hands what it finalizes to a
+function that returns the next pass, or `Done(result)` at the end:
+
+```python
+def plan(self, params, ctx):
+    def refit(basis):
+        return lk.core.chain(Eigenvalues(basis), then=lk.core.Done)
+
+    return lk.core.chain(Eigenbasis(), then=refit)
+```
+
+`chain` is typed, so `then` must accept exactly what `finalize` returns. Each
+pass is an ordinary curvature with its own monoid statistic. `lk.laplace` runs
+the passes in order, reading the data once per pass, and the user never sees
+them. The [Curvatures](curvature.py#several-passes) guide shows how a `Staged` method mixes with
+single-pass ones.

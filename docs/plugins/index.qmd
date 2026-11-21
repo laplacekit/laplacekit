@@ -1,0 +1,13 @@
+---
+title: Plugin list
+listing:
+  - id: plugins
+    contents: list.yml
+    template: list.ejs
+    categories: true
+    filter-ui: true
+    sort-ui: false
+---
+
+::: {#plugins}
+:::

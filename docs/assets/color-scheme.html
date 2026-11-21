@@ -1,0 +1,23 @@
+<script>
+  // Follow the system light/dark setting on every load and whenever it
+  // changes. The theme hides Quarto's switch (theme.scss).
+  (() => {
+    // Forget a choice stored by an earlier version with a switch, before Quarto
+    // reads it, so that `respect-user-color-scheme` picks the system setting.
+    try {
+      localStorage.removeItem("quarto-color-scheme");
+    } catch (e) {}
+
+    const dark = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const follow = () => {
+      const isDark = document.body.classList.contains("quarto-dark");
+
+      if (isDark !== dark.matches && window.quartoToggleColorScheme) {
+        window.quartoToggleColorScheme();
+      }
+    };
+
+    dark.addEventListener("change", follow);
+  })();
+</script>

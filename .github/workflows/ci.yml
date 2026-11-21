@@ -1,0 +1,47 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  # Ruff only, at the version in uv.lock: no project sync.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: echo "RUFF=$(uv export --only-group dev --no-hashes --frozen | grep '^ruff==')" >> "$GITHUB_ENV"
+      - run: uvx --from "$RUFF" ruff check
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: echo "RUFF=$(uv export --only-group dev --no-hashes --frozen | grep '^ruff==')" >> "$GITHUB_ENV"
+      - run: uvx --from "$RUFF" ruff format --check
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: make typecheck
+  imports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: make imports
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: make test

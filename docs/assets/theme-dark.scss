@@ -1,0 +1,21 @@
+/*-- scss:defaults --*/
+
+// Dark mode: light ink on slate. Links and the name use lighter tints than in
+// light mode, which would be too dark on slate.
+$lk-color-scheme: dark;
+$lk-bg: #1F2937;
+$lk-fg: #E6EDF3;
+$lk-muted: #9CA3AF;
+$lk-link: #A59CF6;
+$lk-link-hover: #C6C0FA;
+$lk-brand: #F27BA6;
+$lk-border: #374151;
+// Code blocks sit one step above the page.
+$lk-surface: #2A3444;
+$lk-surface-hover: #344155;
+
+$lk-note: #A59CF6;
+$lk-tip: #4ADE80;
+$lk-warning: #FBBF24;
+$lk-caution: #FB923C;
+$lk-important: #F87171;

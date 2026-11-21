@@ -1,0 +1,140 @@
+---
+title: "Why **laplacekit**"
+---
+
+**laplacekit** is an extensible, modern Laplace-approximation library for
+PyTorch, built on a plugin system. Here is what that adds over `laplace-torch`,
+`laplax` and `posteriors`.
+
+## What's new?
+
+|                                    | **laplacekit** | [`laplace-torch`](https://github.com/aleximmer/Laplace) | [`laplax`](https://github.com/laplax-org/laplax) | [`posteriors`](https://github.com/normal-computing/posteriors) |
+| ---------------------------------- | :------------: | :-----------------------------------------------------: | :----------------------------------------------: | :------------------------------------------------------------: |
+| Goal: every Laplace method, on any model |       ✅       |                           ❌                            |                        ❌                        |                               ❌                               |
+| Plugin system                      |       ✅       |                           ❌                            |                        ❌                        |                               ❌                               |
+
+**Every Laplace method, on any model.** This is the goal. The alpha covers
+part of it today. `laplace-torch` has (almost) every Laplace method, in weight
+space and function space alike. Its diagonal and full curvatures run on any
+model through its `curvlinops` and `asdl` backends, but its KFAC needs a network
+made of `nn.Linear` and `nn.Conv2d`, and an LLM, a diffusion model, or a Mamba
+needs workarounds. **laplacekit** talks to the model only through autograd.
+Each method declares what it needs, and **laplacekit** checks the model
+_before_ fitting. By default, it then uses the dense GGN for small layers, KFAC
+for larger ones that module hooks reach, and a diagonal elsewhere ([Choosing a
+curvature](examples/curvature.py)). Function-space (GP) Laplace, with a subset
+of the data, shares the same interface, so both kinds of posterior work with the
+same `predict_outputs`, linearized `predict` and tuning calls ([Function
+space](examples/function_space.py)). `laplax` is JAX only. `posteriors` works on
+any PyTorch model that `torch.func` can handle, but only with diagonal and full
+curvature, and only in weight space.
+
+**Plugin system.** Think Neovim or VS Code. A new Laplace method is a package:
+install it with `pip` and pass it to `lk.laplace`. The built-in methods
+are written the exact same way, against the same public interfaces, with no
+special access. So a third-party method is a first-class citizen, and several
+plugins can be mixed in one fit. Extending `laplace-torch` means subclassing
+`BaseLaplace` (a few thousand lines) and sending a PR. `laplax` and
+`posteriors` are libraries of functions: they can be composed, or a new method
+written from scratch, but there is no plugin host. The
+[Plugins](plugins/overview.qmd) tab shows the contracts, and [A
+curvature](plugins/curvature.py) walks through a new method.
+
+## How it compares
+
+|                                                 | **laplacekit**                                                                          | [`laplace-torch`](https://github.com/aleximmer/Laplace) | [`laplax`](https://github.com/laplax-org/laplax) | [`posteriors`](https://github.com/normal-computing/posteriors) |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| Framework                                       | PyTorch                                                                                                 | PyTorch                                                 | JAX                                              | PyTorch                                                        |
+| LLMs (Hugging Face, LoRA) without special code  | yes (`lk.transformers.laplace_lora` on a published LoRA adapter; tested on tiny Llama, GPT-2 and Mamba) | with workarounds                                        | JAX models only                                  | yes                                                            |
+| Diffusion models                                | yes (`lk.diffusers.laplace` on a pretrained DDPM)                                                       | no                                                      | JAX models only                                  | ?                                                              |
+| Fit from your own training loop                 | yes (several processes with `lk.distributed.all_reduce`, tested on CPU; multi-GPU planned)              | no                                                      | ?                                                | yes                                                            |
+| Fully type-checked, with typed extension points | yes                                                                                                     | no                                                      | ?                                                | ?                                                              |
+| Options as typed objects and checked literals   | yes                                                                                                     | no                                                      | no                                               | yes                                                            |
+| Differentiate through the whole fit             | yes                                                                                                     | no                                                      | yes                                              | yes                                                            |
+| Diagonal and full curvature                     | yes                                                                                                     | yes                                                     | yes                                              | yes                                                            |
+| KFAC                                            | yes (`curvlinops`)                                                                                      | yes                                                     | no                                               | no                                                             |
+| Low-rank curvature                              | yes (`lk.LowRankGGN`, Nyström sketch)                                                                   | yes                                                     | yes                                              | no                                                             |
+| Last-layer Laplace                              | yes                                                                                                     | yes                                                     | ?                                                | through a parameter subset                                     |
+| Subnetwork Laplace                              | yes (`lk.subnet`, `lk.subsets.from_mask`)                                                               | yes                                                     | ?                                                | through a parameter subset                                     |
+| Function-space (GP) Laplace                     | yes (subset of data; ELLA, VaLLA and FSP-Laplace in `lk.gp`)                                            | yes                                                     | ?                                                | no                                                             |
+| Linearized predictive                           | yes                                                                                                     | yes                                                     | yes                                              | yes (diagonal posteriors)                                      |
+| Marginal-likelihood tuning                      | yes                                                                                                     | yes                                                     | yes                                              | no                                                             |
+| Marglik training                                | yes (`lk.marglik`)                                                                                      | yes                                                     | ?                                                | ?                                                              |
+
+"planned" means on the roadmap for the first alpha. "?" means not checked yet.
+The other columns come from each library's documentation and source as of
+November 2026; corrections are welcome.
+
+## Coming from `laplace-torch`
+
+The table maps the public API of `laplace-torch` (as of November 2026) to
+**laplacekit**. `fs` is `laplacekit.function_space`. "Not in 0.1a"
+marks what **laplacekit** doesn't have yet.
+
+| [`laplace-torch`](https://github.com/aleximmer/Laplace) | **laplacekit** |
+| --- | --- |
+| **Fitting** | |
+| `Laplace(model, likelihood, ...)`, then `la.fit(loader)` | `lk.laplace(model, data, likelihood)` |
+| `fit(loader, override=False)` | `lk.laplace(..., prior=post)` (continual learning) |
+| `dict_key_x`, `dict_key_y` | `lk.data.from_loader(loader, prepare=...)`, which returns `lk.Batch` |
+| `backend`, `backend_kwargs` | the fields of the `hessian_approx` object, such as `lk.KFAC(fisher="mc")` |
+| `enable_backprop=True` | always on |
+| `temperature` | none |
+| `state_dict()`, `load_state_dict()` | `lk.save(post, f)`, `lk.load(f, model)` |
+| `progress_bar`, `verbose` | not in 0.1a |
+| **Curvature** | |
+| `hessian_structure="full"` | `hessian_approx=lk.DenseGGN(joint=True)` |
+| `"kron"` | `lk.KFAC()` |
+| `"diag"` | `lk.DiagGGN()` |
+| `"lowrank"` | `lk.LowRankGGN(rank)` |
+| `EFInterface`, `CurvlinopsEF` | `lk.DenseGGN(fisher="empirical")`, `lk.DiagGGN(fisher="empirical")`, `lk.KFAC(fisher="empirical")` |
+| `CurvlinopsHessian` | `lk.DenseHessian()` |
+| `stochastic=True`, `num_samples` | `lk.DiagGGN(fisher="mc", mc_samples=...)`, `lk.KFAC(fisher="mc", mc_samples=...)` |
+| A subclass of `CurvatureInterface` | a plugin against `lk.core.Curvature` |
+| **Subsets** | |
+| `subset_of_weights="last_layer"`, `last_layer_name` | `lk.subsets.last_layer` (the default), `lk.subsets.named("fc.*")` |
+| `"all"` | `lk.subsets.all` |
+| `"subnetwork"`, `subnetwork_indices` | `lk.subsets.from_mask(masks)` |
+| `RandomSubnetMask`, `LargestMagnitudeSubnetMask` | `lk.subnet.random(n)`, `lk.subnet.largest_magnitude(n)` |
+| `LargestVarianceDiagLaplaceSubnetMask` | `lk.subnet.largest_variance(post, n)` |
+| `LargestVarianceSWAGSubnetMask` | `lk.subnet.largest_variance(lk.subnet.swag_variance(model, data, ...), n)` |
+| `ParamNameSubnetMask`, `ModuleNameSubnetMask` | `lk.subsets.named("0.weight")`, `lk.subsets.named("0.*")` |
+| **Priors and tuning** | |
+| `prior_precision` (scalar, per layer, per weight) | `lk.priors.Isotropic`, `lk.priors.Layerwise`, `lk.priors.Diagonal` |
+| `prior_mean` | `lk.priors.Isotropic(prior_precision, mean=...)` |
+| `optimize_prior_precision(method="marglik")` | the default `hyper_tuner=lk.MarginalLikelihood()` of `lk.laplace`, or `lk.tune(post)` |
+| `method="gridsearch"`, `log_prior_prec_min`, `grid_size`, ... | `lk.tune(post, lk.GridSearch(objective, values=torch.logspace(...)))` |
+| `val_loader`, `loss` | `lk.objectives.predictive_nll(val)`, `lk.objectives.brier`, `lk.objectives.ece` |
+| `log_marginal_likelihood(prior_precision, sigma_noise)` | `post.log_marglik()`, on `copy.replace(post, prior=..., likelihood=lk.Gaussian(sigma=...))` |
+| **Likelihoods** | |
+| `"regression"`, `sigma_noise` | `lk.Gaussian()` (learned), `lk.Gaussian(sigma=...)` (fixed) |
+| `"classification"` | `lk.Categorical()` |
+| `BernoulliLikelihood` | `lk.Bernoulli()` |
+| `"reward_modeling"`, `BradleyTerryLikelihood` | `lk.reward.bradley_terry()` on `lk.reward.pairwise(model)` |
+| `HeteroscedasticGaussianLikelihood(eps)` | `lk.heteroscedastic.MeanVarianceGaussian(eps)` |
+| `get_likelihood("...")`, a `Likelihood` subclass | the object itself, `lk.likelihoods.from_log_prob(fn)` |
+| **Predictives** | |
+| `pred_type="glm"`, `link_approx="probit"`, `"mc"`, `"bridge"`, `"bridge_norm"` | `lk.predict(post, x, method=lk.Linearized(link=...))` with `lk.Probit()`, `lk.MC(n)`, `lk.Bridge()`, `lk.Bridge(normalized=True)` |
+| `pred_type="nn"` | `lk.WeightSamples(n)` |
+| `functional_variance`, `functional_covariance` | `lk.predict_outputs(post, x)` |
+| `functional_samples`, `predictive_samples` | `lk.sample_outputs(post, x, n, kind="linearized")`, `kind="network"` |
+| `sample(n)` | `post.sample(n)` |
+| `log_prob(value)` | `post.log_prob(params)` |
+| `feature_reduction` (LLMs) | the model's own forward, `lk.predict(..., select=lk.transformers.last_token)` |
+| **Function space** | |
+| `hessian_structure="gp"`, `n_subset` | `lk.function_space.laplace(model, data, likelihood, method=lk.function_space.SubsetOfData(n_subset))` |
+| `independent_outputs=True` | `lk.function_space.SubsetOfData(n_subset, structure="independent")` |
+| `predictive_moments(x)` | `gp.at(x)`, `lk.predict_outputs(gp, x)` |
+| `ELLA(subsample_size, n_eigenvalues)` | `lk.gp.ELLA(lk.gp.from_data(m), rank=k)` |
+| `ELLA.optimize_hyperparameters` | `lk.tune(gp, lk.GridSearch(lk.objectives.predictive_nll(val), values))` |
+| `VaLLA(inducing_locations, num_inducing, inducing_classes)` | `lk.gp.VaLLA(lk.gp.kmeans(n_points))`, `lk.gp.fixed(x, coords=...)` |
+| `VaLLA.fit(iterations, lr)`, `alpha`, `mc_softmax_samples` | `lk.gp.fit_variational(gp, data, n_steps=..., lr=..., alpha=..., n_samples=...)` |
+| none | `lk.gp.fsp_laplace` |
+| **Training** | |
+| `marglik_training(model, loader, likelihood, ...)` | `lk.marglik.train(model, data, likelihood, optimizer=..., epochs=...)` |
+| `prior_structure="scalar"`, `"layerwise"`, `"diag"` | `prior=lk.priors.Isotropic`, `lk.priors.Layerwise`, `lk.priors.Diagonal` |
+| `prior_prec_init`, `lr_hyp`, `n_hypersteps`, `marglik_frequency`, `n_epochs_burnin` | `prior=lk.priors.Layerwise(init)`, `lr_hyper`, `n_hypersteps`, `marglik_frequency`, `n_epochs_burnin` |
+| **Utilities** | |
+| `Kron`, `KronDecomposed` | `lk.core.KronEigenbasis`, `lk.priors.KronSum.of(post)` |
+| `RunningNLLMetric` and the other running metrics | `lk.objectives.predictive_nll` |
+

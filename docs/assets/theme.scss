@@ -1,0 +1,459 @@
+/*-- scss:defaults --*/
+
+// Shared by both modes. The `$lk-*` colours come from theme-light.scss or
+// theme-dark.scss, which are listed after this file and so are read first.
+
+$web-font-path: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap";
+$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$font-family-monospace: "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace;
+$headings-font-weight: 600;
+$h1h2h3-font-weight: 600;
+
+// Type sized like a GitHub README: code at 0.85em, headings at 32/24/20/16px.
+// GitHub's body is 16px in the system font; Inter is taller per pixel, so its
+// body is 15px to read the same. Lines are 1.6, as on the author's blog.
+$font-size-root: 16px;
+$font-size-base: 0.9375rem;
+$line-height-base: 1.6;
+$code-font-size: 0.85em;
+$h1-font-size: 2rem;
+$h2-font-size: 1.5rem;
+$h3-font-size: 1.25rem;
+$h4-font-size: 1rem;
+$sidebar-font-size: 0.875rem;
+$sidebar-font-size-section: 0.875rem;
+$toc-font-size: 0.8125rem;
+
+$enable-rounded: true;
+$border-radius: 0.375rem;
+
+$body-bg: $lk-bg;
+$body-color: $lk-fg;
+$text-muted: $lk-muted;
+$primary: $lk-link;
+$link-color: $lk-link;
+$link-hover-color: $lk-link-hover;
+$border-color: $lk-border;
+$table-border-color: $lk-border;
+
+$navbar-bg: $lk-bg;
+$navbar-fg: $lk-fg;
+$navbar-hl: $lk-link;
+$navbar-brand: $lk-fg;
+$navbar-brand-hl: $lk-link;
+
+$sidebar-bg: $lk-bg;
+$sidebar-fg: $lk-muted;
+$sidebar-hl: $lk-link;
+
+$toc-color: $lk-muted;
+$toc-active-border: $lk-link;
+$toc-inactive-border: $lk-border;
+
+$footer-bg: $lk-bg;
+$footer-fg: $lk-muted;
+
+$nav-tabs-border-color: $lk-border;
+$nav-tabs-link-active-color: $lk-fg;
+$nav-tabs-link-active-bg: $lk-bg;
+$nav-tabs-link-active-border-color: $lk-border $lk-border $lk-bg;
+
+// Inputs and their addon boxes, such as the plugin list's search icon, which
+// Bootstrap leaves light grey in both modes.
+$input-bg: $lk-bg;
+$input-color: $lk-fg;
+$input-border-color: $lk-border;
+$input-placeholder-color: $lk-muted;
+$input-group-addon-bg: $lk-surface;
+$input-group-addon-color: $lk-muted;
+$input-group-addon-border-color: $lk-border;
+
+$code-block-bg: $lk-surface;
+$code-block-border-left: false;
+$code-bg: $lk-surface;
+$code-color: $lk-fg;
+$pre-color: $lk-fg;
+
+$callout-border-width: 0.075rem;
+$callout-border-scale: 0%;
+$callout-icon-scale: 0%;
+$callout-color-note: $lk-note;
+$callout-color-tip: $lk-tip;
+$callout-color-warning: $lk-warning;
+$callout-color-caution: $lk-caution;
+$callout-color-important: $lk-important;
+
+/*-- scss:rules --*/
+
+// Native widgets (scrollbars, form controls) follow the mode.
+:root {
+  color-scheme: $lk-color-scheme;
+  scrollbar-color: $lk-border transparent;
+}
+
+// The navbar sits on the page colour, set off by a hairline.
+.navbar {
+  border-bottom: 1px solid $lk-border;
+}
+
+// The GitHub glyph next to search: Quarto draws the search icon as a 26px SVG,
+// so the glyph is set to the size of the magnifier inside it.
+.navbar .nav-link .bi-github {
+  font-size: 1.375rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+// Links in prose stay underlined, since the colour alone does not set them
+// apart from the text in dark mode.
+main a:not(.nav-link):not(.sidebar-link) {
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+}
+
+// Inline code: a soft chip.
+p code:not(.sourceCode),
+li code:not(.sourceCode),
+td code:not(.sourceCode) {
+  padding: 0.1em 0.3em;
+  border-radius: 0.25rem;
+}
+
+// Code blocks: a soft background and no border.
+div.sourceCode,
+pre.sourceCode,
+.cell-output pre {
+  border: none;
+}
+
+div.sourceCode {
+  border-radius: $border-radius;
+}
+
+// Room on the page: a heading sits well below the text before it and close to
+// its own, paragraphs and lists breathe, and code blocks stand apart from the
+// prose. A cell's output lines up with the code above it. The h2 rule carries
+// the ID because Quarto's `#quarto-content section:first-of-type h2:first-of-type`
+// would squeeze the first heading after an intro.
+#quarto-content main.content h2 {
+  margin-top: 2.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+}
+
+#quarto-content #title-block-header + section > h2:first-child {
+  margin-top: 0;
+}
+
+main.content h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+main.content h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+main.content p {
+  margin-bottom: 1.25rem;
+}
+
+main.content ul,
+main.content ol {
+  margin-bottom: 1.25rem;
+}
+
+main.content li + li {
+  margin-top: 0.4rem;
+}
+
+main.content div.sourceCode {
+  margin: 1.5rem 0;
+}
+
+main.content pre.sourceCode {
+  padding: 0.9rem 1rem;
+  line-height: 1.5;
+}
+
+main.content .cell div.sourceCode {
+  margin-bottom: 0.75rem;
+}
+
+main.content .cell-output pre {
+  margin: 0 0 1.5rem;
+  padding-left: 1rem;
+  line-height: 1.5;
+}
+
+main.content .cell {
+  margin-bottom: 1.5rem;
+}
+
+main.content .table {
+  margin: 1.5rem 0;
+}
+
+main.content .table > :not(caption) > * > * {
+  padding: 0.6rem 0.75rem;
+}
+
+main.content .quarto-figure {
+  margin: 2rem 0;
+}
+
+// Narrow screens. Quarto writes a plot's pixel size on its <img>, so figures are
+// capped at the column and keep their aspect. `:where` gives the rule the weight
+// of a bare `img`, so a sized image (the landing page's `.brand-mark`) keeps its
+// height. MathJax sets display math as one
+// unbreakable line; a wide one scrolls in its own box instead of widening the page.
+:where(main.content) img {
+  max-width: 100%;
+  height: auto;
+}
+
+main.content mjx-container[display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+// Breadcrumbs above the title: Bootstrap floats the `>` before every item but
+// the first, which drops those items below the first one.
+.quarto-title-breadcrumbs .breadcrumb {
+  align-items: baseline;
+}
+
+.quarto-title-breadcrumbs .breadcrumb-item + .breadcrumb-item::before {
+  float: none;
+}
+
+// Tables scroll inside their own box (tables.lua wraps each one), so a wide
+// table doesn't widen the page on a phone.
+main.content .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+// Breadcrumbs in the bar under the navbar (phones): one line. Earlier items
+// shrink and end in an ellipsis; the current page keeps its full name.
+.quarto-secondary-nav nav.quarto-page-breadcrumbs {
+  min-width: 0;
+}
+
+.quarto-secondary-nav .breadcrumb {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.quarto-secondary-nav .breadcrumb-item {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quarto-secondary-nav .breadcrumb-item:last-child {
+  flex-shrink: 0;
+}
+
+// Light or dark follows the system setting only (color-scheme.html), so the
+// switch Quarto adds to the navbar and sidebar is hidden.
+.quarto-color-scheme-toggle {
+  display: none !important;
+}
+
+// The page title sits clear of the first paragraph.
+#title-block-header {
+  margin-bottom: 2rem;
+}
+
+// quartodoc puts a reference page's h1 in the first section instead, right
+// under the breadcrumbs.
+#title-block-header:not(:has(h1)) {
+  margin-bottom: 0;
+}
+
+#title-block-header + section > h1:first-child {
+  margin-top: 0;
+}
+
+// Callouts in the style of MkDocs Material admonitions: a thin border in the
+// callout's colour, a title bar tinted with it, and a soft shadow.
+$lk-callouts: (
+  "note": $lk-note,
+  "tip": $lk-tip,
+  "warning": $lk-warning,
+  "caution": $lk-caution,
+  "important": $lk-important,
+);
+
+div.callout.callout {
+  border: 0.075rem solid $lk-border;
+  border-radius: 0.2rem;
+  overflow: hidden;
+  background-color: $lk-bg;
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.05), 0 0 0.05rem rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  margin: 2rem 0;
+}
+
+div.callout.callout > .callout-header {
+  padding: 0.45rem 0.75rem;
+  opacity: 1;
+}
+
+div.callout.callout .callout-title-container {
+  font-weight: 600;
+}
+
+div.callout.callout .callout-body-container {
+  padding: 0.35rem 0.75rem 0.1rem;
+}
+
+@each $name, $colour in $lk-callouts {
+  div.callout.callout.callout-#{$name} {
+    border-color: $colour;
+  }
+
+  div.callout.callout.callout-#{$name} > .callout-header {
+    background-color: rgba($colour, 0.1);
+  }
+
+  div.callout.callout.callout-#{$name} > .callout-header[data-bs-toggle="collapse"]:hover {
+    background-color: rgba($colour, 0.16);
+  }
+}
+
+// Shiki tokens (see docs/shiki/highlight.mjs) carry both colours as CSS
+// variables; the active mode's stylesheet picks its own. Line spans inherit
+// the block's foreground from the variables set on <code>.
+code.sourceCode[data-shiki],
+code.sourceCode[data-shiki] span {
+  color: var(--shiki-#{$lk-color-scheme});
+  font-style: var(--shiki-#{$lk-color-scheme}-font-style, normal);
+  font-weight: var(--shiki-#{$lk-color-scheme}-font-weight, inherit);
+}
+
+// Sidebar: small muted items on an even rhythm, small captions for the
+// top groups, and a marked active page. Pages are links and groups are
+// buttons, so both get the same box; a group's pages sit one step in.
+.sidebar-navigation .sidebar-item {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.sidebar-navigation .sidebar-item .sidebar-link {
+  width: 100%;
+  padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+  border-left: 2px solid transparent;
+  color: $lk-muted;
+}
+
+.sidebar-navigation .sidebar-item .sidebar-link:hover {
+  color: $lk-fg;
+}
+
+.sidebar-navigation .sidebar-item .sidebar-link:focus {
+  outline: none;
+}
+
+.sidebar-navigation .sidebar-item .sidebar-link:focus-visible {
+  outline: 2px solid $lk-link;
+  outline-offset: -2px;
+  border-radius: 0.25rem;
+}
+
+.sidebar-navigation .sidebar-item button.sidebar-link[aria-expanded="true"] {
+  color: $lk-fg;
+}
+
+.sidebar-navigation .sidebar-item a.sidebar-link.active {
+  border-left-color: $lk-link;
+  color: $lk-link;
+  font-weight: 600;
+}
+
+.sidebar-navigation .sidebar-menu-container > ul > .sidebar-item-section > .sidebar-item-container > .sidebar-item-text {
+  margin-top: 1.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: $lk-fg;
+}
+
+.sidebar-navigation .sidebar-menu-container > ul > .sidebar-item-section > .sidebar-item-container .bi-chevron-right {
+  display: none;
+}
+
+.sidebar-navigation .sidebar-section {
+  padding-bottom: 0;
+}
+
+.sidebar-navigation .sidebar-section.depth1 {
+  padding-left: 0;
+}
+
+.sidebar-navigation .sidebar-section.depth2 {
+  padding-left: 0.75rem;
+  padding-bottom: 0.25rem;
+}
+
+// Reference tables (quartodoc Parameters, Returns, Raises): the Name and
+// Type columns are code, so they get the code font. quartodoc writes them
+// as plain text.
+.doc-section table td:nth-child(-n + 2) {
+  font-family: $font-family-monospace;
+  font-size: 0.875em;
+}
+
+// A name in the first column stays on one line, so the column is at least as
+// wide as it: the reference summaries' linked names and the Name of a
+// parameter. On a phone the browser would otherwise break them mid-word.
+main.content td:first-child > a:only-child {
+  white-space: nowrap;
+}
+
+.doc-section table td:first-child {
+  white-space: nowrap;
+}
+
+// Plugin list (plugins/list.ejs): one entry per plugin, set off by
+// hairlines, with its Install button on the right of the name.
+.plugin-entry {
+  padding: 1rem 0;
+  border-bottom: 1px solid $lk-border;
+}
+
+.plugin-entry p {
+  margin-bottom: 0.25rem;
+}
+
+.plugin-head > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+}
+
+.plugin-name {
+  font-weight: 600;
+}
+
+.plugin-meta {
+  font-size: 0.875rem;
+  color: $lk-muted;
+}
+
+.plugin-install {
+  margin-left: auto;
+}
+
+.plugin-panel {
+  margin-top: 0.75rem;
+}

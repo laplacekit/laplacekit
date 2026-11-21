@@ -1,0 +1,62 @@
+---
+title: "![](assets/logo.svg){.brand-mark .light-content}![](assets/logo-dark.svg){.brand-mark .dark-content}**laplacekit**"
+---
+
+An extensible, modern Laplace-approximation library for PyTorch, built on a plugin system.
+
+Every Laplace method, on any model. Curvatures, likelihoods, priors, predictives and model integrations are all plugins, and the built-in ones are written the same way as yours. It runs on `torch.func` and Curvlinops.
+
+```bash
+pip install laplacekit
+pip install "laplacekit[transformers]"  # lk.transformers: Laplace-LoRA on language models
+pip install "laplacekit[diffusers]"     # lk.diffusers: diffusion models
+pip install "laplacekit[all]"           # every first-party plugin
+```
+
+::: {.panel-tabset}
+
+## Classifier
+
+```diff
++ import laplacekit as lk
+
+  model = train(model, train_loader)
+  logits = model(x_test)
+- probs = logits.softmax(-1)
++ post = lk.laplace(model, train_loader, likelihood=lk.Categorical())
++ probs = lk.predict(post, x_test).probs
+```
+
+## Regression
+
+```diff
++ import laplacekit as lk
+
+  model = train(model, train_loader)
+- y_pred = model(x_test)
++ post = lk.laplace(model, train_loader, likelihood=lk.Gaussian())
++ pred = lk.predict(post, x_test)
++ y_pred, y_std = pred.mean, pred.stddev
+```
+
+## Language model
+
+```diff
++ import laplacekit as lk
+
+  model = train(get_peft_model(model, lora_config), train_loader)
+  inputs = tokenizer(prompts, return_tensors="pt", padding=True)
+- probs = model(**inputs).logits[:, -1].softmax(-1)
++ post = lk.transformers.laplace_lora(model, train_loader)
++ probs = lk.predict(post, inputs, select=lk.transformers.last_token).probs
+```
+
+:::
+
+**laplacekit** picks the parameters, the curvature and the prior; `print(post)`
+shows what it chose. In the language model tab, `last_token` reads each
+prompt's last real token, so padding does not matter.
+
+- [Quickstart](quickstart/basics.py)
+- [In depth](examples/classification.py)
+- [Plugins](plugins/index.qmd)

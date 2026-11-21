@@ -1,0 +1,18 @@
+[project]
+name = "laplacekit-subnet"
+version = "0.1a0"
+description = "Subnetwork selection for laplacekit: random, largest magnitude, largest marginal variance"
+authors = [{ name = "Agustinus Kristiadi", email = "agustinus@kristia.de" }]
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = ["laplacekit>=0.1a0,<0.2"]
+
+[project.entry-points."laplacekit.plugins"]
+laplacekit_subnet = "laplacekit_subnet:plugin"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+laplacekit = { workspace = true }

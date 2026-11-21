@@ -1,0 +1,21 @@
+[project]
+name = "laplacekit-diffusers"
+version = "0.1a0"
+description = "Hugging Face diffusers presets for laplacekit: last-layer Laplace on denoisers with DDPM-family schedulers"
+authors = [{ name = "Agustinus Kristiadi", email = "agustinus@kristia.de" }]
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = [
+    "laplacekit>=0.1a0,<0.2",
+    "diffusers>=0.43.0",
+]
+
+[project.entry-points."laplacekit.plugins"]
+laplacekit_diffusers = "laplacekit_diffusers:plugin"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+laplacekit = { workspace = true }

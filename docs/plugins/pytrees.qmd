@@ -1,0 +1,69 @@
+---
+title: Immutability and pytrees
+---
+
+Every object in **laplacekit** is immutable: curvatures, statistics, priors,
+posteriors, predictives. A step returns a new object and leaves its input as it
+was. Plugin objects follow the same rule, and `@lk.core.pytree` is how they do it.
+
+## `@lk.core.pytree`
+
+`@lk.core.pytree` turns a class into a frozen dataclass and registers it as a
+`torch` pytree node. Its tensor fields are the leaves, and a field marked
+`lk.core.static()` is part of the structure instead:
+
+```python
+@lk.core.pytree
+class HutchinsonDiag:
+    n_probes: int = lk.core.static(default=16)
+
+
+@lk.core.pytree
+class WeightBias:
+    prior_precision: Mapping[str, Tensor]  # leaves
+    is_bias: Tensor  # a leaf
+```
+
+Settings go into static fields: counts, flags, module types, functions.
+Tensors go into ordinary fields, so every tool that walks a tree finds them.
+`tree_map` and `tree_leaves` from `lk.core` reach every tensor of a posterior,
+however deeply the plugin's objects nest. The core uses them to detach a
+posterior (`detach_leaves`), to move a statistic across processes
+(`all_reduce`), and to tune.
+
+## Why the leaves matter
+
+A hyper tuner such as `lk.MarginalLikelihood()` asks the prior for its
+hyperparameters (`prior.tunable()`, such as its `prior_precision`) and the
+likelihood for its learned ones. It finds them among the posterior's leaves by
+identity, optimizes them, and builds a new posterior with `replace_leaves`,
+which swaps each old tensor for the new one. A tensor kept in
+a static field, or a copy made on the fly, is not a leaf, and
+`where_leaves` raises `ValueError`.
+
+The same holds for a `TunablePrior`. Its `tunable()` must return the prior's
+own tensors as they are, not a copy or a sum of them. `lk.laplace` checks
+this before reading data and raises `StructureError` with "(a copy?)"
+otherwise. The [Priors](prior.py) guide keeps its precisions in one mapping field and
+returns that mapping.
+
+## Changing a field
+
+A frozen dataclass can't be assigned to. To change a field, we make a new
+object with `copy.replace`:
+
+```python
+import copy
+
+sharp = copy.replace(post, prior=lk.priors.Isotropic(1e8))
+```
+
+`post` is unchanged, and `sharp` shares every other field with it, so this is
+cheap. The core works the same way. `update` returns a new statistic, a
+fit's `Running.finish` returns the next step, and a hyper tuner returns a new
+posterior.
+
+::: {.callout-note}
+A statistic is sent between processes with `pickle`. Define its
+class at the top level of a module, so that every process can import it.
+:::
