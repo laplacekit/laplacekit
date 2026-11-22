@@ -7,7 +7,7 @@
 
 <p align="center">
 An extensible, modern <b>Laplace-approximation library</b> for PyTorch, built on a <b>plugin system</b>.
-Modern models like HuggingFace LLMs, diffusion models, reward models are supported.
+It supports modern models: Hugging Face LLMs, diffusion models and reward models.
 </p>
 
 <p align="center">
@@ -30,15 +30,15 @@ pip install laplacekit
 
 ## First-party plugins
 
-Available first party plugins are: HuggingFace's `transformers`, `diffusers` models, reward models (Bradley-Terry likelihood), subnetwork Laplace, heteroscedastic Laplace, function-space GP-Laplace, and marginal-likelihood-based Laplace.
+The first-party plugins cover Hugging Face `transformers` and `diffusers` models, reward models (Bradley–Terry likelihood), subnetwork Laplace, heteroscedastic Laplace, function-space (GP) Laplace, and marginal-likelihood training.
 
-Install all of them:
+To install all of them:
 
 ```bash
 pip install "laplacekit[all]"
 ```
 
-Or individually:
+Or one at a time:
 
 ```bash
 pip install "laplacekit[transformers]"
@@ -52,7 +52,8 @@ pip install "laplacekit[marglik]"
 
 ## Usage
 
-Train the model as usual, then fit and predict:
+Train your model as usual.
+Then fit the Laplace approximation and predict:
 
 ```python
 import laplacekit as lk
@@ -64,7 +65,8 @@ posterior = lk.laplace(model, train_loader, lk.Categorical())
 probs = lk.predict(posterior, x_test).probs
 ```
 
-Various arguments, including serialization:
+Every choice is an argument.
+A posterior can also be saved and loaded:
 
 ```python
 # Fit the posterior
@@ -78,7 +80,7 @@ post = lk.laplace(
     hyper_tuner=lk.GridSearch(lk.objectives.predictive_nll(val_loader), values=lams),
 )
 
-# Saving the posterior
+# Save the posterior
 lk.save(post, "post.pt")
 
 # Load the posterior
@@ -87,14 +89,14 @@ post = lk.load("post.pt", model)
 
 ## What's new?
 
-**Plugin system.** Think Neovim or VS Code. A new Laplace method is a package:
-install it with `pip` and pass it to `lk.laplace`. The built-in methods
-are written the exact same way, against the same public interfaces, with no
-special access. So a third-party method is a first-class citizen, and several
-plugins can be mixed in one fit. Extending `laplace-torch` means subclassing
-`BaseLaplace` (a few thousand lines) and sending a PR. `laplax` and
-`posteriors` are libraries of functions: they can be composed, or a new method
-written from scratch, but there is no plugin host.
+**Plugin system.** Think Neovim or VS Code: a new Laplace method is a package.
+Install it with `pip` and pass it to `lk.laplace`.
+The built-in methods are written the same way, against the same public interfaces, with no special access.
+So a third-party method is a first-class citizen, and one fit can mix several plugins.
+
+Other libraries work differently.
+Extending `laplace-torch` means subclassing `BaseLaplace` (a few thousand lines) and sending a PR.
+`laplax` and `posteriors` are libraries of functions: you can compose them or write a new method from scratch, but there is no plugin host.
 
 ## How it compares
 
@@ -117,33 +119,24 @@ written from scratch, but there is no plugin host.
 | Marginal-likelihood tuning | ✅ | ✅ | ✅ | ❌ |
 | Marglik training | ✅ | ✅ | ❓ | ❓ |
 
-✅ yes · 🟡 partly · ❌ no · ❓ not checked. Details on the [Why page](https://laplacekit.org/why.html#how-it-compares).
+✅ yes · 🟡 partly · ❌ no · ❓ not checked.
+Details on the [Why page](https://laplacekit.org/why.html#how-it-compares).
 
-> [!TIP]
-> Coming from `laplace-torch`? The [Why page](https://laplacekit.org/why.html#coming-from-laplace-torch)
-> maps its API to <code><b>laplacekit</b></code>.
+> [!TIP] > Coming from `laplace-torch`? > The [Why page](https://laplacekit.org/why.html#coming-from-laplace-torch) maps its API to <code><b>laplacekit</b></code>.
 
 ## Agent workflow
 
-<code><b>laplacekit</b></code> is designed so that a coding agent can write a new Laplace
-method without reading the core:
+<code><b>laplacekit</b></code> is designed so that a coding agent can write a new Laplace method without reading the core:
 
-- Each extension point is a small typed interface in its own file, and `ty`
-  tells the agent it got something wrong in seconds.
-- Errors say what's missing _and_ what would work instead, so the agent can fix
-  its own mistakes. A wrong argument type, such as `hessian_approx="kron"` or
-  the class `lk.KFAC` for an instance, raises a `TypeError` that names what to
-  pass.
-- `print(post)` shows every choice a fit made, and `torch.manual_seed` (or a
-  `generator=` argument) makes reruns identical, as in torch.
-- `lk.testing` checks a new plugin against its interface and the laws it must
-  satisfy.
-- `print(lk.health())` reports whether the install works: the torch version,
-  the `curvlinops` pin, autograd on a small model, float64, and each plugin's own
-  checks.
-- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a
-  Markdown copy of every page, the API reference included, for the agent to
-  read.
+- Each extension point is a small typed interface in its own file.
+  If the agent gets something wrong, `ty` tells it within seconds.
+- Errors say what is missing _and_ what would work instead, so the agent can fix its own mistakes.
+  For example, a wrong argument type, such as `hessian_approx="kron"` or the class `lk.KFAC` instead of an instance, raises a `TypeError` that names what to pass.
+- `print(post)` shows every choice a fit made.
+  As in torch, `torch.manual_seed` (or a `generator=` argument) makes reruns identical.
+- `lk.testing` checks a new plugin against its interface and the laws it must satisfy.
+- `print(lk.health())` reports whether the install works: the torch version, the `curvlinops` pin, autograd on a small model, float64, and each plugin's own checks.
+- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a Markdown copy of every page, the API reference included, for the agent to read.
 
 ## Citation
 
