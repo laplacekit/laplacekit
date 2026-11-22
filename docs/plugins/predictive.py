@@ -6,14 +6,13 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a protocol. Subclass it, as in
-# `class MyClass(lk.core.Predictive):`, and your editor marks a missing method in red.
+# The contract below is a protocol.
+# Subclass it, as in `class MyClass(lk.core.Predictive):`, and your editor marks a missing method in red.
 # [Protocols in one page](protocols.py) shows how.
 # :::
 #
-# A predictive turns a posterior and inputs into a distribution over targets. It
-# says what it needs from the model in `requires`, which `lk.predict` checks
-# against [the probe](requirements.qmd) before it runs:
+# A predictive turns a posterior and inputs into a distribution over targets.
+# It states what it needs from the model in `requires`, which `lk.predict` checks against [the probe](requirements.qmd) before it runs:
 #
 # ```python
 # class Predictive[B](Protocol):
@@ -25,12 +24,13 @@
 #     ) -> Distribution: ...
 # ```
 #
-# `requires` is a read-only property: `lk.predict` reads `predictive.requires`
-# without a call, and a property or a field of a frozen dataclass both satisfy
-# it. `B` is the kind of posterior it accepts. `lk.predict` passes a fresh
-# `generator`, which a predictive that samples draws from. We write the Laplace bridge[^bridge] for
-# classifiers. It matches a Dirichlet to the Gaussian over the logits, in closed
-# form and without sampling, and predicts with the Dirichlet's mean.
+# `requires` is a read-only property: `lk.predict` reads `predictive.requires` without calling it.
+# Either a property or a field of a frozen dataclass works.
+# `B` is the kind of posterior the predictive accepts.
+# `lk.predict` passes a fresh `generator`, which a sampling predictive draws from.
+#
+# As an example, we write the Laplace bridge[^bridge] for classifiers.
+# It matches a Dirichlet to the Gaussian over the logits, in closed form and without sampling, and predicts with the Dirichlet's mean.
 
 # %%
 import copy
@@ -88,13 +88,14 @@ class LaplaceBridge:
 
 
 # %% [markdown]
-# `lk.predict_outputs` does the linearization and gives the Gaussian over the logits,
-# so the predictive only maps its means and variances to probabilities. It is
-# exact, so it ignores the generator. It goes
-# into `lk.predict` as the method. We compare it with the default, the probit
-# approximation, and with a Monte Carlo estimate from 2,000 logit n_samples, on the
-# training data and on points far from it. A seeded generator fixes the Monte
-# Carlo draws, so we can compare with them later.
+# `lk.predict_outputs` does the linearization and gives the Gaussian over the logits.
+# So the predictive only maps its means and variances to probabilities.
+# The bridge is exact, so it ignores the generator.
+# It goes into `lk.predict` as the method.
+#
+# We compare it with the default, the probit approximation, and with a Monte Carlo estimate from 2,000 logit samples.
+# We do so on the training data and on points far from it.
+# A seeded generator fixes the Monte Carlo draws, so we can compare with them later.
 
 # %%
 x_np, y_np = make_blobs(
@@ -140,37 +141,32 @@ for name, method in methods.items():
     )
 
 # %% [markdown]
-# On the data, the three agree to about a percent. Far away, the bridge is the
-# most confident and the Monte Carlo estimate the least, with probit in between.
-# On this problem, the bridge is the coarsest of the three approximations. What
-# it gives in exchange is the Dirichlet itself, a closed-form distribution over
-# the class probabilities, which this predictive reduces to its mean.
+# On the data, the three agree to about a percent.
+# Far away, the bridge is the most confident and the Monte Carlo estimate the least, with probit in between.
+# On this problem, the bridge is the coarsest of the three approximations.
+# In exchange, it gives the Dirichlet itself, a closed-form distribution over the class probabilities.
+# Our predictive reduces it to its mean.
 #
 # ## The math
 #
-# With $K$ classes and logits $f \sim \mathcal{N}(\mu, \Sigma)$, the Laplace
-# bridge gives the Dirichlet with concentrations
+# With $K$ classes and logits $f \sim \mathcal{N}(\mu, \Sigma)$, the Laplace bridge gives the Dirichlet with concentrations
 #
 # $$
 #   \alpha_k = \frac{1}{\Sigma_{kk}} \Big( 1 - \frac{2}{K} + \frac{e^{\mu_k}}{K^2} \sum_{l=1}^K e^{-\mu_l} \Big) .
 # $$
 #
-# It is the inverse of the Laplace approximation of a Dirichlet in the softmax
-# basis, which maps $\alpha$ to
+# It is the inverse of the Laplace approximation of a Dirichlet in the softmax basis, which maps $\alpha$ to
 #
 # $$
 #   \mu_k = \log \alpha_k - \frac{1}{K} \sum_{l=1}^K \log \alpha_l , \qquad \Sigma_{kk} = \frac{1}{\alpha_k} \Big( 1 - \frac{2}{K} \Big) + \frac{1}{K^2} \sum_{l=1}^K \frac{1}{\alpha_l} .
 # $$
 #
-# The predictive probabilities are the Dirichlet's mean, $\alpha_k / \sum_l
-# \alpha_l$.
+# The predictive probabilities are the Dirichlet's mean, $\alpha_k / \sum_l \alpha_l$.
 #
 # ## The test
 #
-# `lk.testing.check_predictive` checks that `requires` is a `Requirements` and
-# that the result is a `Distribution` with one batch entry per input. As an
-# independent reference for the numbers, the bridge must undo the second map
-# above, written out separately.
+# `lk.testing.check_predictive` checks that `requires` is a `Requirements` and that the result is a `Distribution` with one batch entry per input.
+# As an independent reference for the numbers, the bridge must undo the second map above, which we write out separately.
 
 
 # %%
@@ -193,8 +189,8 @@ test_laplace_bridge()
 # %% [markdown]
 # ## A likelihood of your own
 #
-# The built-in predictives know the built-in likelihoods. For any other, they
-# ask the likelihood itself, through two hooks:
+# The built-in predictives know the built-in likelihoods.
+# For any other, they ask the likelihood itself, through two hooks:
 #
 # ```python
 # class HasSampleAverage(Protocol):  # WeightSamples and the MC link
@@ -205,11 +201,9 @@ test_laplace_bridge()
 #     def default_link(self, n_samples: int | Literal["exact"], /) -> LinkApprox: ...
 # ```
 #
-# To see them at work, we write the categorical likelihood ourselves and swap
-# it into the posterior from above with `copy.replace`. That keeps the
-# curvature fitted under the built-in `Categorical`, which is right here only
-# because `Softmax` is the same likelihood, and it lets us check the numbers
-# against the built-in.
+# To see them at work, we write the categorical likelihood ourselves and swap it into the posterior from above with `copy.replace`.
+# That keeps the curvature fitted under the built-in `Categorical`.
+# This is right here only because `Softmax` is the same likelihood, and it lets us check the numbers against the built-in.
 
 
 # %%
@@ -230,9 +224,10 @@ except CapabilityError as e:
     print(e)
 
 # %% [markdown]
-# `average` is the smaller contract. It gets draws of the outputs, shaped `[S,
-# N, K]` here, and returns the predictive. For a categorical, that is the mean
-# of the softmax over the draws. With it, `WeightSamples` and the `MC` link work.
+# `average` is the smaller contract.
+# It gets draws of the outputs, shaped `[S, N, K]` here, and returns the predictive.
+# For a categorical, that is the mean of the softmax over the draws.
+# With it, `WeightSamples` and the `MC` link work.
 
 
 # %%
@@ -251,10 +246,11 @@ conf = conf.probs.max(-1).values
 print(f"MC link: mean confidence {conf.mean():.3f} far away")
 
 # %% [markdown]
-# That is the Monte Carlo row from the start of the page. `default_link` then
-# names the link that `Linearized` uses when it is given none. `n_samples` is
-# `None` when the output covariance is exact, and the number of draws when it is
-# sampled. In that case an `MC` link must not ask for more draws than there are.
+# That is the Monte Carlo row from the start of the page.
+#
+# `default_link` names the link that `Linearized` uses when it is given none.
+# `n_samples` is `"exact"` when the output covariance is exact, and the number of draws when it is sampled.
+# In the latter case, an `MC` link must not ask for more draws than there are.
 
 
 # %%

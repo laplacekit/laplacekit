@@ -2,23 +2,23 @@
 title: "Why **laplacekit**"
 ---
 
-**laplacekit** is an extensible, modern Laplace-approximation library for
-PyTorch, built on a plugin system. Modern models like Hugging Face LLMs,
-diffusion models and reward models are supported. Here is what it adds over
-`laplace-torch`, `laplax` and `posteriors`.
+**laplacekit** is an extensible, modern Laplace-approximation library for PyTorch, built on a plugin system.
+It supports modern models: Hugging Face LLMs, diffusion models and reward models.
+This page lists what it adds over `laplace-torch`, `laplax` and `posteriors`.
 
 ## What's new?
 
-**Plugin system.** Think Neovim or VS Code. A new Laplace method is a package:
-install it with `pip` and pass it to `lk.laplace`. The built-in methods
-are written the exact same way, against the same public interfaces, with no
-special access. So a third-party method is a first-class citizen, and several
-plugins can be mixed in one fit. Extending `laplace-torch` means subclassing
-`BaseLaplace` (a few thousand lines) and sending a PR. `laplax` and
-`posteriors` are libraries of functions: they can be composed, or a new method
-written from scratch, but there is no plugin host. The
-[Plugins](plugins/overview.qmd) tab shows the contracts, and [A
-curvature](plugins/curvature.py) walks through a new method.
+**Plugin system.**
+Think Neovim or VS Code: a new Laplace method is a package.
+Install it with `pip` and pass it to `lk.laplace`.
+The built-in methods are written the same way, against the same public interfaces, with no special access.
+So a third-party method is a first-class citizen, and one fit can mix several plugins.
+
+Other libraries work differently.
+Extending `laplace-torch` means subclassing `BaseLaplace` (a few thousand lines) and sending a PR.
+`laplax` and `posteriors` are libraries of functions: you can compose them or write a new method from scratch, but there is no plugin host.
+
+The [Plugins](plugins/overview.qmd) tab shows the contracts, and [Curvatures](plugins/curvature.py) walks through a new method.
 
 ## How it compares
 
@@ -41,37 +41,30 @@ curvature](plugins/curvature.py) walks through a new method.
 | Marginal-likelihood tuning                      | yes                                                                                                     | yes                                                     | yes                                              | no                                                             |
 | Marglik training                                | yes (`lk.marglik`)                                                                                      | yes                                                     | ?                                                | ?                                                              |
 
-"planned" means on the roadmap for the first alpha. "?" means not checked yet.
-The other columns come from each library's documentation and source as of
-November 2026; corrections are welcome.
+"planned" means on the roadmap for the first alpha.
+"?" means not checked yet.
+The other columns come from each library's documentation and source as of November 2026.
+Corrections are welcome.
 
 ## Agent workflow
 
-**laplacekit** is designed so that a coding agent can write a new Laplace
-method without reading the core:
+**laplacekit** is designed so that a coding agent can write a new Laplace method without reading the core:
 
-- Each extension point is a small typed interface in its own file, and `ty`
-  tells the agent it got something wrong in seconds.
-- Errors say what's missing _and_ what would work instead, so the agent can fix
-  its own mistakes. A wrong argument type, such as `hessian_approx="kron"` or
-  the class `lk.KFAC` for an instance, raises a `TypeError` that names what to
-  pass.
-- `print(post)` shows every choice a fit made, and `torch.manual_seed` (or a
-  `generator=` argument) makes reruns identical, as in torch.
-- `lk.testing` checks a new plugin against its interface and the laws it must
-  satisfy.
-- `print(lk.health())` reports whether the install works: the torch version,
-  the `curvlinops` pin, autograd on a small model, float64, and each plugin's own
-  checks.
-- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a
-  Markdown copy of every page, the API reference included, for the agent to
-  read.
+- Each extension point is a small typed interface in its own file.
+  If the agent gets something wrong, `ty` tells it within seconds.
+- Errors say what is missing _and_ what would work instead, so the agent can fix its own mistakes.
+  For example, a wrong argument type, such as `hessian_approx="kron"` or the class `lk.KFAC` instead of an instance, raises a `TypeError` that names what to pass.
+- `print(post)` shows every choice a fit made.
+  As in torch, `torch.manual_seed` (or a `generator=` argument) makes reruns identical.
+- `lk.testing` checks a new plugin against its interface and the laws it must satisfy.
+- `print(lk.health())` reports whether the install works: the torch version, the `curvlinops` pin, autograd on a small model, float64, and each plugin's own checks.
+- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a Markdown copy of every page, the API reference included, for the agent to read.
 
 ## Coming from `laplace-torch`
 
-The table maps the public API of `laplace-torch` (as of November 2026) to
-**laplacekit**. `fs` is `laplacekit.function_space`. "Not in 0.1a"
-marks what **laplacekit** doesn't have yet.
+The table maps the public API of `laplace-torch` (as of November 2026) to **laplacekit**.
+`fs` is `laplacekit.function_space`.
+"Not in 0.1a" marks what **laplacekit** doesn't have yet.
 
 | [`laplace-torch`](https://github.com/aleximmer/Laplace) | **laplacekit** |
 | --- | --- |

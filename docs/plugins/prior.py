@@ -6,16 +6,15 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a protocol. Subclass it, as in
-# `class MyClass(lk.core.Prior):`, and your editor marks a missing method in red.
+# The contract below is a protocol.
+# Subclass it, as in `class MyClass(lk.core.Prior):`, and your editor marks a missing method in red.
 # [Protocols in one page](protocols.py) shows how.
 # :::
 #
-# A prior is any `Prior`: it has a log density, a location, and it can
-# add its precision to a curvature operator. The built-in priors put one
-# precision on everything (`Isotropic`), one per entry (`Diagonal`), or one per
-# layer (`Layerwise`). We write a prior with two precisions, one for the weights
-# and one for the biases, and let `lk.laplace` tune both.
+# A prior is any `Prior`.
+# It has a log density and a location, and it can add its precision to a curvature operator.
+# The built-in priors put one precision on everything (`Isotropic`), one per entry (`Diagonal`), or one per layer (`Layerwise`).
+# We write a prior with two precisions, one for the weights and one for the biases, and let `lk.laplace` tune both.
 #
 # ```python
 # class Prior(Protocol):
@@ -34,8 +33,8 @@
 #     def tunable(self) -> Tensor | Mapping[str, Tensor]: ...
 # ```
 #
-# `cov_mv` lets the predictives push the prior forward, and `tunable` tells the
-# hyper tuners which hyperparameters to tune.
+# `cov_mv` lets the predictives push the prior forward.
+# `tunable` tells the hyper tuners which hyperparameters to tune.
 
 # %%
 from collections.abc import Mapping
@@ -99,10 +98,9 @@ def weight_bias(
 
 
 # %% [markdown]
-# The prior is a [`@lk.core.pytree`](pytrees.qmd), so a tuner can find its tensors, and every
-# method hands the work to a built-in `Diagonal` with the right entries. We fit
-# an MLP on four blobs and put the posterior on all its parameters, once with
-# our prior and once with the default `Isotropic`.
+# The prior is a [`@lk.core.pytree`](pytrees.qmd), so a tuner can find its tensors.
+# Every method hands the work to a built-in `Diagonal` with the right entries.
+# We fit an MLP on four blobs and put the posterior on all its parameters, once with our prior and once with the default `Isotropic`.
 
 # %%
 x_np, y_np = make_blobs(
@@ -136,21 +134,19 @@ for prior in (weight_bias(params), lk.priors.Isotropic(1.0)):
     print(f"log marginal likelihood: {post.log_marglik():.1f}\n")
 
 # %% [markdown]
-# For both, `lk.MarginalLikelihood()` maximized the marginal likelihood over the
-# prior's precisions, both of them for our prior, because it is a
-# `TunablePrior`. A prior without `tunable` has nothing to tune, so the tuner
-# leaves it as it is.
+# For both posteriors, `lk.MarginalLikelihood()` maximized the marginal likelihood over the prior's precisions.
+# With our prior, it tuned both precisions, because `WeightBias` is a `TunablePrior`.
+# A prior without `tunable` has nothing to tune, so the tuner leaves it as it is.
 #
-# The weights end up with about the precision `Isotropic` picks, and the biases
-# get a looser prior. The marginal likelihood goes up by a few nats. Since
-# `Isotropic` is the special case of equal precisions, the best `WeightBias`
-# can't do worse, and here the second precision buys only a little.
+# The weights end up with about the precision `Isotropic` picks, and the biases get a looser prior.
+# The marginal likelihood goes up by a few nats.
+# Since `Isotropic` is the special case of equal precisions, the best `WeightBias` can't do worse.
+# Here, the second precision buys only a little.
 #
-# We used `lk.DiagGGN()` on purpose. A vector precision has to be added to the
-# curvature entry by entry, and a Kronecker-factored curvature (KFAC or EKFAC)
-# has no room for that: it refuses any vector precision, even a constant one,
-# with `StructureError`. It only takes one scalar per block, as `Isotropic` or a
-# `Layerwise` with a scalar per block gives it.
+# We used `lk.DiagGGN()` on purpose.
+# A vector precision has to be added to the curvature entry by entry, and a Kronecker-factored curvature such as KFAC has no room for that.
+# It refuses any vector precision, even a constant one, with `StructureError`.
+# It only takes one scalar per block, as `Isotropic` gives it, or a `Layerwise` with a scalar per block.
 #
 # ## The math
 #
@@ -160,21 +156,17 @@ for prior in (weight_bias(params), lk.priors.Isotropic(1.0)):
 #   p(\theta) = \mathcal{N}\big(0, \Lambda_0^{-1}\big) , \qquad \Lambda_0 = \mathrm{diag}\big(\lambda_w (1 - b) + \lambda_b \, b\big) ,
 # $$
 #
-# and the Laplace precision is $\Lambda_0 + N G$, with $G$ the curvature. The
-# default hyper tuner maximizes the Laplace marginal likelihood over $\log \lambda_w$
-# and $\log \lambda_b$ without refitting $G$. That is why `tunable` must return
-# the prior's own positive leaves: the tune replaces them in the posterior by
-# identity and optimizes their logs. `lk.laplace` checks this before it reads
-# any data, so a `tunable` that returns a copy raises `StructureError` right
-# away instead of after the fit.
+# and the Laplace precision is $\Lambda_0 + N G$, with $G$ the curvature.
+# The default hyper tuner maximizes the Laplace marginal likelihood over $\log \lambda_w$ and $\log \lambda_b$ without refitting $G$.
+# That is why `tunable` must return the prior's own positive leaves: the tuner finds them in the posterior by identity, replaces them, and optimizes their logs.
+# `lk.laplace` checks this before it reads any data, so a `tunable` that returns a copy raises `StructureError` right away instead of after the fit.
 #
 # ## The test
 #
-# `lk.testing.check_prior` checks the contract in float64: a finite `log_prob`,
-# `add_precision_to` keeping each operator's type, `cov_mv` being the inverse
-# of the precision, and, since our prior is a `TunablePrior`, `tunable`
-# returning its own positive leaves. We compare the density and the precision
-# with a reference built from `torch.distributions`.
+# `lk.testing.check_prior` checks the contract in float64.
+# The `log_prob` must be finite, `add_precision_to` must keep each operator's type, and `cov_mv` must be the inverse of the precision.
+# Since our prior is a `TunablePrior`, `tunable` must also return its own positive leaves.
+# On top of that, we compare the density and the precision against a reference built from `torch.distributions`.
 
 
 # %%

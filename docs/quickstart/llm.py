@@ -4,15 +4,12 @@
 # jupyter: python3
 # ---
 #
-# We take a language model fine-tuned with LoRA to classify the emotion of a
-# sentence, and put a Laplace approximation on its adapters. The model is
-# `SmolLM2-360M-Instruct` with rank-8 adapters and a 6-class head, trained on
-# the `dair-ai/emotion` dataset.
+# We take a language model fine-tuned with LoRA to classify the emotion of a sentence, and put a Laplace approximation on its adapters.
+# The model is `SmolLM2-360M-Instruct` with rank-8 adapters and a 6-class head, trained on the `dair-ai/emotion` dataset.
 #
 # ::: {.callout-note title="Plugin"}
-# This page uses the
-# [`laplacekit-transformers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/transformers)
-# plugin. Install it with
+# This page uses the [`laplacekit-transformers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/transformers) plugin.
+# Install it with:
 #
 # ```bash
 # pip install "laplacekit[transformers]" peft datasets
@@ -61,12 +58,11 @@ _ = model.eval()
 
 # %% [markdown]
 # `is_trainable=True` marks the adapters and the head as the parameters to fit.
-# Eager attention lets the linearized predictive differentiate through the
-# model, and the model needs the tokenizer's padding token to find the last
-# real token of each sentence.
+# Eager attention lets the linearized predictive differentiate through the model.
+# The model also needs the tokenizer's padding token to find the last real token of each sentence.
 #
-# The batches are tokenizer outputs with the labels added. We fit on 32 of the
-# 16,000 training sentences and pass the full size as `n_data=`.
+# The batches are tokenizer outputs with the labels added.
+# We fit on 32 of the 16,000 training sentences and pass the full size as `n_data=`.
 
 # %%
 DATA_REV = "cab853a1dbdf4c42c2b3ef2173804746df8825fe"
@@ -89,7 +85,7 @@ post = lk.transformers.laplace_lora(
 print("prior precision:", float(post.prior.prior_precision))
 
 # %% [markdown]
-# Two sentences like the training data, and one that has no emotion at all.
+# We predict on two sentences like the training data, and one that has no emotion at all.
 
 # %%
 texts = [
@@ -110,27 +106,24 @@ for text, a, b in zip(texts, p_map, p_lap, strict=True):
     print(f"  Laplace {classes[b.argmax()]:<8} {b.max():.2f}")
 
 # %% [markdown]
-# MAP and Laplace pick the same classes. The Laplace predictive is less sure on
-# all three, and on the sentence with no emotion it drops below one half. It
-# linearizes the model on the 6 class logits only, never on the 49,152 logits of
-# the vocabulary, so their covariance is computed exactly, without sampling.
+# MAP and Laplace pick the same classes.
+# The Laplace predictive is less sure on all three, and on the sentence with no emotion, it drops below one half.
+# It linearizes the model on the 6 class logits only, never on the 49,152 logits of the vocabulary.
+# So their covariance is computed exactly, without sampling.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# Let $\theta$ be the LoRA adapters and the head, and $\theta_*$ their trained
-# values. The Laplace approximation is $\mathcal{N}(\theta \mid \theta_*,
-# \Sigma)$ with $\Sigma^{-1} = \lambda I + N G$, where $N = 16{,}000$ and $G$ is
-# a KFAC approximation of the GGN, averaged over the 32 sentences. The
-# linearized model makes the $K = 6$ logits Gaussian,
+# Let $\theta$ be the LoRA adapters and the head, and $\theta_*$ their trained values.
+# The Laplace approximation is $\mathcal{N}(\theta \mid \theta_*, \Sigma)$ with $\Sigma^{-1} = \lambda I + N G$, where $N = 16{,}000$ and $G$ is a KFAC approximation of the GGN, averaged over the 32 sentences.
+# The linearized model makes the $K = 6$ logits Gaussian,
 #
 # $$
 #   f(x) \sim \mathcal{N}\big(f_{\theta_*}(x), \; J(x) \Sigma J(x)^\top\big) ,
 # $$
 #
-# with $J(x)$ the $K \times P$ Jacobian with respect to the adapters. Computing
-# $J(x) \Sigma J(x)^\top$ costs $K$ backward passes per sentence. On the
-# vocabulary of a causal LM, $K$ would be $49{,}152$, which is why we read the
-# answer from 6 logits. The probit approximation then gives the class
-# probabilities.
+# with $J(x)$ the $K \times P$ Jacobian with respect to the adapters.
+# Computing $J(x) \Sigma J(x)^\top$ costs $K$ backward passes per sentence.
+# On the vocabulary of a causal LM, $K$ would be $49{,}152$, which is why we read the answer from 6 logits.
+# The probit approximation then gives the class probabilities.
 # :::
 #
 # The full tutorial: [Language models](../examples/llm.py)

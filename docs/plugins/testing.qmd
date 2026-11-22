@@ -2,8 +2,8 @@
 title: Testing
 ---
 
-Each kind of plugin has a checker in `lk.testing` for the laws the core relies
-on. We call them from the plugin's own tests:
+Each kind of plugin has a checker in `lk.testing` for the laws the core relies on.
+We call them from the plugin's own tests:
 
 ```python
 import laplacekit as lk
@@ -14,9 +14,7 @@ def test_last_layers_is_a_subset():
         lk.testing.check_subset(last_layers(n), model, caps)
 ```
 
-A checker that finds a broken law raises `AssertionError` naming the law and
-the object, for example
-`monoid law: fold(a ++ b) != fold(a) + fold(b) for MyCurvature (max rel err 3e-02)`.
+A checker that finds a broken law raises an `AssertionError` that names the law and the object, e.g., `monoid law: fold(a ++ b) != fold(a) + fold(b) for MyCurvature (max rel err 3e-02)`.
 
 | Checker | For | What it checks |
 | --- | --- | --- |
@@ -28,26 +26,21 @@ the object, for example
 | `check_predictive(predictive, posterior, inputs)` | `Predictive` | `requires` is a `Requirements`; a `Distribution` with one batch entry per input. |
 | `check_curvature(curv, model, likelihood, params, batches)` | `Curvature`, `Staged` | `init` is the identity; the monoid law; `finalize` returns averages; `diagonal`, `mv` and `logdet` agree with the dense matrix. |
 
-The curvature and prior checks run in float64, so they need float64 params and
-a float64 model (`model.double()`). Checks that build a dense matrix run only
-up to `lk.testing.DENSE_MAX_PARAMS` (512) parameters, so the test model should
-be small. The output Hessian laws of `check_likelihood` likewise run only for
-events up to `lk.core.MAX_DENSE_EVENT` (4096) entries. The
-[reference](../reference/index.qmd#testing-plugins) has each checker's full
-list of laws.
+The curvature and prior checks run in float64, so they need float64 params and a float64 model (`model.double()`).
+Checks that build a dense matrix run only up to `lk.testing.DENSE_MAX_PARAMS` (512) parameters, so the test model should be small.
+The output Hessian laws of `check_likelihood` likewise run only for events up to `lk.core.MAX_DENSE_EVENT` (4096) entries.
+The [reference](../reference/index.qmd#testing-plugins) has each checker's full list of laws.
 
 ::: {.callout-note}
-The checkers test the contract only. A curvature that returns zeros keeps every
-law, so test the numbers against an independent reference as well: a dense
-matrix, `torch.func`, a published result. The example's test in [Your
-first plugin](first.py) compares with names written by hand.
+The checkers test the contract only.
+A curvature that returns zeros keeps every law, so test the numbers against an independent reference as well: a dense matrix, `torch.func`, a published result.
+The test in [Your first plugin](first.py) compares against names written by hand.
 :::
 
 ## Gradients of an objective
 
-`check_objective` detaches the posterior, makes the leaves that `where` picks
-require grad, and calls the objective. When a test needs the gradient itself,
-the same three helpers from `lk.core` do it:
+`check_objective` detaches the posterior, makes the leaves that `where` picks require grad, and calls the objective.
+When a test needs the gradient itself, the same three helpers from `lk.core` do it:
 
 ```python
 where = lambda post: post.prior.prior_precision
@@ -62,9 +55,9 @@ loss = my_objective(lk.core.replace_leaves(posterior, old, new))
 
 ## Imports
 
-A plugin imports `laplacekit` and `laplacekit.core`, never a submodule such as
-`laplacekit.core.layout`. The submodules change without notice; the public API
-is what the plugin can rely on. `import-linter` checks it in CI:
+A plugin imports `laplacekit` and `laplacekit.core`, never a submodule such as `laplacekit.core.layout`.
+The submodules change without notice, while the public API is what the plugin can rely on.
+`import-linter` checks it in CI:
 
 ```ini
 [importlinter]
@@ -82,6 +75,5 @@ forbidden_modules =
 allow_indirect_imports = true
 ```
 
-`laplacekit` has to be among the `root_packages`. Without it, `import-linter`
-sees only the top-level package and keeps the contract even when the plugin
-imports a submodule.
+`laplacekit` has to be among the `root_packages`.
+Without it, `import-linter` sees only the top-level package and keeps the contract even when the plugin imports a submodule.

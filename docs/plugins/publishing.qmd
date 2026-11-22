@@ -2,8 +2,7 @@
 title: Publishing
 ---
 
-A plugin is an ordinary Python distribution, so it goes to PyPI like any
-other:
+A plugin is an ordinary Python distribution, so it goes to PyPI like any other:
 
 ```bash
 uv build
@@ -12,11 +11,9 @@ uv publish
 
 ## Names and dependencies
 
-The distribution is `laplacekit-<name>` and the import package
-`laplacekit_<name>`, where `<name>` is usually the library the plugin wraps:
-`laplacekit-transformers` wraps `transformers`. The dependency on `laplacekit` should
-match the record's `supports`, so that pip refuses an install the plugin can't
-handle:
+Name the distribution `laplacekit-<name>` and the import package `laplacekit_<name>`, where `<name>` is usually the library the plugin wraps.
+For example, `laplacekit-transformers` wraps `transformers`.
+The dependency on `laplacekit` should match the record's `supports`, so that pip refuses an install the plugin can't handle:
 
 ```toml
 [project]
@@ -27,20 +24,17 @@ dependencies = ["laplacekit>=0.1a0,<0.2", "mylib>=2.1"]
 typeCheckingMode = "standard"
 ```
 
-The `[tool.pyright]` table turns on type checking in VS Code (Pylance), so a
-class that misses a protocol method is marked in red for everyone who opens the
-project. [Protocols in one page](protocols.py) shows what it catches.
+The `[tool.pyright]` table turns on type checking in VS Code (Pylance).
+Then a class that misses a protocol method is marked in red for everyone who opens the project.
+[Protocols in one page](protocols.py) shows what it catches.
 
-Pin the wrapped library as tightly as the plugin needs. **laplacekit** itself
-pins `curvlinops-for-pytorch==3.0.1`, since its KFAC adapter reads private
-attributes of that version.
+Pin the wrapped library as tightly as the plugin needs.
+**laplacekit** itself pins `curvlinops-for-pytorch==3.0.1`, since its KFAC adapter reads private attributes of that version.
 
 ## Getting listed
 
-The [plugin list](index.qmd) shows the plugins we know of. To add yours, open
-a pull request on [the
-repository](https://github.com/laplacekit/laplacekit) that adds one entry to
-`docs/plugins/list.yml`:
+The [plugin list](index.qmd) shows the plugins we know of.
+To add yours, open a pull request on [the repository](https://github.com/laplacekit/laplacekit) that adds one entry to `docs/plugins/list.yml`:
 
 ```yaml
 - title: laplacekit-mylib
@@ -59,6 +53,7 @@ repository](https://github.com/laplacekit/laplacekit) that adds one entry to
     url: https://arxiv.org/abs/...
 ```
 
-`categories` takes one kind from the table in the [Overview](overview.qmd),
-`use` is the smallest code that uses the plugin, and `paper` is optional. The
-list builds the install commands from `title`.
+`categories` takes one kind from the table in the [Overview](overview.qmd).
+`use` is the smallest code that uses the plugin.
+`paper` is optional.
+The list builds the install commands from `title`.

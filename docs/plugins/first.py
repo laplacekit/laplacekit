@@ -4,18 +4,16 @@
 # jupyter: python3
 # ---
 #
-# The smallest contract in **laplacekit** is a subset: a function that gets the
-# model and what [the probe](requirements.qmd) found, and returns the parameters that get a
-# posterior. We write one, `last_layers(n)`, which picks the last $n$ layers,
-# and ship it as a package with a test and an entry point. The package is
-# [`laplacekit-plugin-example`](https://github.com/laplacekit/laplacekit-plugin-example),
-# a repository of its own that doubles as a template: GitHub's **Use this
-# template** button starts a new plugin from it.
+# The smallest contract in **laplacekit** is a subset.
+# It is a function that gets the model and what [the probe](requirements.qmd) found, and returns the parameters that get a posterior.
+# We write one, `last_layers(n)`, which picks the last $n$ layers, and ship it as a package with a test and an entry point.
+# The package lives in its own repository, [`laplacekit-plugin-example`](https://github.com/laplacekit/laplacekit-plugin-example).
+# It doubles as a template: GitHub's **Use this template** button starts a new plugin from it.
 #
 # ## The code
 #
-# A plugin is an import package, here `laplacekit_example`. All of it fits in
-# its `__init__.py`:
+# A plugin is an import package, here `laplacekit_example`.
+# All of it fits in its `__init__.py`:
 
 # %%
 #| echo: false
@@ -30,20 +28,18 @@ print(
 )
 
 # %% [markdown]
-# A subset is called after the probe has run the model on the first batch, and
-# before any data goes into the fit. `caps.module_order` lists the modules that
-# own parameters, in the order their forward finished, so the last $n$ entries
-# are the last $n$ layers. The root module comes first as `ROOT_BLOCK` when it
-# owns parameters itself. Asking for more layers than the model has raises
-# `CapabilityError` with the count, rather than returning fewer layers.
+# A subset is called after the probe has run the model on the first batch, and before any data goes into the fit.
+# `caps.module_order` lists the modules that own parameters, in the order their forward finished, so the last $n$ entries are the last $n$ layers.
+# The root module comes first as `ROOT_BLOCK` when it owns parameters itself.
+# If we ask for more layers than the model has, it raises `CapabilityError` with the count instead of returning fewer layers.
 #
-# The subset returns the module's own parameter tensors under their names. A
-# copy fails `check_subset`.
+# The subset returns the module's own parameter tensors under their names.
+# It must not copy them: a copy fails `check_subset`.
 #
 # ## Using it
 #
-# The function goes where a built-in subset would. We fit a small classifier on
-# four blobs and put a posterior on its last two layers.
+# The function goes wherever a built-in subset goes.
+# We fit a small classifier on four blobs and put a posterior on its last two layers.
 
 # %%
 import torch
@@ -75,15 +71,13 @@ post = lk.laplace(
 print(post)
 
 # %% [markdown]
-# The posterior covers layers `2` and `4`, the last two `Linear` layers. Layer
-# `0` stays a point estimate.
+# The posterior covers layers `2` and `4`, the last two `Linear` layers.
+# Layer `0` stays a point estimate.
 #
 # ## The test
 #
-# `lk.testing.check_subset` checks what every subset must do: return a
-# non-empty mapping of the module's own parameters, by their names, and the same
-# selection on a second call. On top of that, we compare the result with names
-# we write out by hand:
+# `lk.testing.check_subset` checks what every subset must do: return a non-empty mapping of the module's own parameters, by their names, and the same selection on a second call.
+# On top of that, we compare the result against names we write out by hand:
 #
 # ```{.python filename="tests/test_last_layers.py"}
 # import laplacekit as lk
@@ -128,10 +122,8 @@ print(post)
 #     assert params["4.weight"] is model[4].weight
 # ```
 #
-# The full file also checks the forward order (a layer defined first but run
-# last is the last layer), the root module's own parameters, each error, and
-# that `lk.plugins()` finds the package. From a clone of the repository, run it
-# with
+# The full file also checks the forward order (a layer defined first but run last is the last layer), the root module's own parameters, each error, and that `lk.plugins()` finds the package.
+# From a clone of the repository, run it with:
 #
 # ```bash
 # uv sync
@@ -142,8 +134,8 @@ print(post)
 #
 # ## The package
 #
-# The package is a `pyproject.toml` next to `src/` and `tests/`. Its first
-# part:
+# The package is a `pyproject.toml` next to `src/` and `tests/`.
+# Its first part:
 #
 # ```{.toml filename="pyproject.toml"}
 # [project]
@@ -173,33 +165,24 @@ print(post)
 # ]
 # ```
 #
-# The rest of the file configures `ruff`, `import-linter` (see
-# [Testing](testing.qmd#imports)) and `pytest`.
+# The rest of the file configures `ruff`, `import-linter` (see [Testing](testing.qmd#imports)) and `pytest`.
 #
-# The convention is `laplacekit-<name>` for the distribution and
-# `laplacekit_<name>` for the import package. The entry point in the group
-# `laplacekit.plugins` names the import package and points at its `plugin`, the
-# `lk.Plugin` record at the bottom of `__init__.py`. Its `supports` says which
-# **laplacekit** versions the plugin works with. The `dev` group installs
-# `laplacekit` from GitHub while it is not on PyPI; the group is for working on
-# the plugin only, so a project that installs the plugin keeps its own
-# `laplacekit`.
+# The convention is `laplacekit-<name>` for the distribution and `laplacekit_<name>` for the import package.
+# The entry point in the group `laplacekit.plugins` names the import package and points at its `plugin`, the `lk.Plugin` record at the bottom of `__init__.py`.
+# Its `supports` says which **laplacekit** versions the plugin works with.
+# The `dev` group is for working on the plugin only, so a project that installs the plugin keeps its own `laplacekit`.
 #
-# `uv sync` in a clone makes an editable install, so the package and its entry
-# point are visible to Python.
+# Running `uv sync` in a clone makes an editable install, so Python sees the package and its entry point.
 #
 # ## Listing it
 #
-# `lk.plugins()` reads the entry points of everything installed. Each plugin's
-# summary is the `description` from its `pyproject.toml`, and under it come the
-# names in its `__all__`, each with the first line of its docstring.
+# `lk.plugins()` reads the entry points of everything installed.
+# Each plugin's summary is the `description` from its `pyproject.toml`, and under it come the names in its `__all__`, each with the first line of its docstring.
 
 # %%
 print(lk.plugins())
 
 # %% [markdown]
-# `laplacekit-example` is this page's own package, installed with the docs and
-# never published.
+# `laplacekit-example` is this page's own package, installed with the docs and never published.
 #
-# Next: [Plugin record and health](record.qmd) adds checks to `lk.health()`, and
-# [Publishing](publishing.qmd) puts the package on PyPI.
+# Next, [Plugin record and health](record.qmd) adds checks to `lk.health()`, and [Publishing](publishing.qmd) puts the package on PyPI.

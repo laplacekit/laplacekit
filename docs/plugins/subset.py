@@ -6,26 +6,25 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a function signature: any function with it works, and
-# your editor checks it where you pass it in.
+# The contract below is a function signature.
+# Any function with that signature works, and your editor checks it where you pass it in.
 # [Protocols in one page](protocols.py) explains protocols in general.
 # :::
 #
-# A subset picks the parameters that get a posterior. It is a function of the
-# model and of what [the probe](requirements.qmd) found:
+# A subset picks the parameters that get a posterior.
+# It is a function of the model and of what [the probe](requirements.qmd) found:
 #
 # ```python
 # class Subset(Protocol):
 #     def __call__(self, model: ModelFn, caps: Capabilities, /) -> Params | Selection: ...
 # ```
 #
-# It returns either whole parameters, as `Params`, or some of their entries, as a
-# `Selection`. We start with whole parameters.
+# It returns either whole parameters, as `Params`, or some of their entries, as a `Selection`.
+# We start with whole parameters.
 #
-# [Your first plugin](first.py) wrote `last_layers(n)`, which counts layers. Here
-# we count parameters instead. `budget(max_params)` takes as many layers from the
-# end of the network as fit into `max_params` parameters, so that a dense
-# curvature over them stays affordable.
+# [Your first plugin](first.py) wrote `last_layers(n)`, which counts layers.
+# Here we count parameters instead.
+# `budget(max_params)` takes as many layers from the end of the network as fit into `max_params` parameters, so that a dense curvature over them stays affordable.
 
 # %%
 import pytest
@@ -86,13 +85,11 @@ def budget(max_params: int) -> Subset:
 
 
 # %% [markdown]
-# `caps.module_order` lists the modules that own parameters, in the order their
-# forward finished, so we walk it backwards. Each layer contributes its own
-# parameters, under the names the module gives them, and we stop at the first
-# layer that would go over the budget.
+# `caps.module_order` lists the modules that own parameters, in the order their forward finished, so we walk it backwards.
+# Each layer contributes its own parameters, under the names the module gives them, and we stop at the first layer that would go over the budget.
 #
-# We try it on an MLP with 96, 1,056 and 132 parameters in its three layers. A
-# budget of 500 gets the last layer only, and 1,200 gets the last two.
+# We try it on an MLP with 96, 1,056 and 132 parameters in its three layers.
+# A budget of 500 gets the last layer only, and 1,200 gets the last two.
 
 # %%
 x_np, y_np = make_blobs(
@@ -122,10 +119,9 @@ for max_params in (500, 1_200):
     print(post)
 
 # %% [markdown]
-# The subset runs after the probe has run the model on the first batch, and
-# before any data goes into the fit. So a subset that can't select anything
-# should raise there, with `StructureError` or `CapabilityError`, and the user
-# finds out before a long pass over the data:
+# The subset runs after the probe has run the model on the first batch, and before any data goes into the fit.
+# So a subset that can't select anything should raise there, with `StructureError` or `CapabilityError`.
+# The user then finds out before a long pass over the data:
 
 # %%
 try:
@@ -136,17 +132,13 @@ except lk.StructureError as e:
 # %% [markdown]
 # ## Some entries only
 #
-# A budget of 500 leaves 368 parameters unused, since the next layer doesn't
-# fit whole. A subset can also pick single entries of a parameter, as the
-# subnetwork Laplace of Daxberger et al. (2021)[^daxberger2021] does. It then
-# returns a `Selection`, which holds the full tensors in `base` and the chosen
-# flat indices in `index`. The easiest way to build one is
-# `Selection.from_masks(params, masks)`, with one bool mask per parameter,
-# shaped like it.
+# A budget of 500 leaves 368 parameters unused, since the next layer doesn't fit whole.
+# A subset can also pick single entries of a parameter, as the subnetwork Laplace of Daxberger et al. (2021)[^daxberger2021] does.
+# It then returns a `Selection`, which holds the full tensors in `base` and the chosen flat indices in `index`.
+# The easiest way to build one is `Selection.from_masks(params, masks)`, with one bool mask per parameter, shaped like it.
 #
-# `fill(max_params)` takes the whole layers from `budget`, and tops them up
-# with the largest-magnitude entries of the other parameters, so that exactly
-# `max_params` entries get a posterior.
+# `fill(max_params)` takes the whole layers from `budget` and tops them up with the largest-magnitude entries of the other parameters.
+# Exactly `max_params` entries then get a posterior.
 
 
 # %%
@@ -191,33 +183,27 @@ print(post)
 print("entries:", sum(v.numel() for v in post.mean.values()))
 
 # %% [markdown]
-# The fit sees one 1-D parameter per source tensor, named `"2.weight[idx]"` and
-# so on, and the rest of the module stays fixed at its trained values. The 368
-# extra entries come from both earlier layers, and the fit keeps one block per
-# module, three in all.
+# The fit sees one 1-D parameter per source tensor, named `"2.weight[idx]"` and so on, and the rest of the module stays fixed at its trained values.
+# The 368 extra entries come from both earlier layers, and the fit keeps one block per module, three in all.
 #
 # ## What a subset may read
 #
-# A subset gets two things. `model` is the `ModelFn`, and its `module` is the
-# `nn.Module` when there is one. `caps` is what the probe recorded: besides
-# `module_order`, it has `hooked`, the `Linear` and `Conv2d` modules whose
-# forward hooks fire (the ones KFAC can reach), and `tied`, the names of tied
-# weights. A subset should decide from these, never from the module's class or
-# its attribute names, so that it works on models it has never seen.
+# A subset gets two things.
+# `model` is the `ModelFn`, and its `module` is the `nn.Module` when there is one.
+# `caps` is what the probe recorded: besides `module_order`, it has `hooked`, the `Linear` and `Conv2d` modules whose forward hooks fire (the ones KFAC can reach), and `tied`, the names of tied weights.
+# A subset should decide from these, never from the module's class or its attribute names.
+# That way, it works on models it has never seen.
 #
-# It must return the module's own parameter tensors, not copies, or a
-# `Selection` whose `base` holds them. A view such as `p.detach()` counts, and
-# `from_masks` stores exactly that. The fit reads the live tensors, and the
-# posterior's mean is taken from them. And it must return the same selection
-# every time it is called, since `lk.laplace` calls it once and `check_subset`
-# twice. For a `Selection`, that means the same entries too.
+# It must return the module's own parameter tensors, not copies, or a `Selection` whose `base` holds them.
+# A view such as `p.detach()` counts, and `from_masks` stores exactly that.
+# The fit reads the live tensors, and the posterior's mean is taken from them.
+# It must also return the same selection every time it is called (for a `Selection`, the same entries too), since `lk.laplace` calls it once and `check_subset` twice.
 #
 # ## The test
 #
-# `lk.testing.check_subset` checks both rules, for `Params` and for a
-# `Selection`. It needs the forward order, which
-# `lk.core.probe` with `subset={}` records without differentiating anything. On top
-# of it, we compare with names we write out by hand, and check the error.
+# `lk.testing.check_subset` checks both rules, for `Params` and for a `Selection`.
+# It needs the forward order, which `lk.core.probe` with `subset={}` records without differentiating anything.
+# On top of it, we compare against names we write out by hand, and check the error.
 
 
 # %%
@@ -280,9 +266,8 @@ def test_fill():
 test_fill()
 
 # %% [markdown]
-# Two of the budgets sit at the edges: 1,188 is exactly the last two layers,
-# and 131 is one short of the last layer's 132. In a plugin package, the test
-# goes into `tests/` and runs with `pytest`; [Your first plugin](first.py) shows
-# the layout.
+# Two of the budgets sit at the edges: 1,188 is exactly the last two layers, and 131 is one short of the last layer's 132.
+# In a plugin package, the test goes into `tests/` and runs with `pytest`.
+# [Your first plugin](first.py) shows the layout.
 #
 # [^daxberger2021]: Daxberger, E., Nalisnick, E., Allingham, J. U., Antorán, J., & Hernández-Lobato, J. M. (2021). Bayesian deep learning via subnetwork inference. *ICML*. <https://arxiv.org/abs/2010.14689>

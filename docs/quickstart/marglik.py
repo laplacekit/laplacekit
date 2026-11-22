@@ -4,14 +4,13 @@
 # jupyter: python3
 # ---
 #
-# Weight decay and noise are usually picked by hand, or by a grid search over
-# several training runs. Marginal-likelihood training learns them during the one
-# run. We use the data and the network of the [regression page](regression.py).
+# Weight decay and noise are usually picked by hand, or by a grid search over several training runs.
+# Marginal-likelihood training learns them in a single run.
+# We use the data and the network of the [regression page](regression.py).
 #
 # ::: {.callout-note title="Plugin"}
-# This page uses the
-# [`laplacekit-marglik`](https://github.com/laplacekit/laplacekit/tree/main/plugins/marglik)
-# plugin. Install it with
+# This page uses the [`laplacekit-marglik`](https://github.com/laplacekit/laplacekit/tree/main/plugins/marglik) plugin.
+# Install it with:
 #
 # ```bash
 # pip install "laplacekit[marglik]"
@@ -38,8 +37,8 @@ loader = DataLoader(dataset, batch_size=50, shuffle=True)
 model = nn.Sequential(nn.Linear(1, 50), nn.Tanh(), nn.Linear(50, 1))
 
 # %% [markdown]
-# `lk.marglik.train` replaces the training loop. The optimizer has no weight
-# decay: the prior precision $\lambda$ sets it, one per layer by default.
+# `lk.marglik.train` replaces the training loop.
+# The optimizer has no weight decay, since the prior precision $\lambda$ plays that role, one per layer by default.
 
 # %%
 trained = lk.marglik.train(
@@ -76,30 +75,26 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# `train` kept epoch 196 of 200, the one with the highest evidence. The learned
-# $\sigma$ is 0.307, close to the 0.3 we used to make the data, and the first
-# layer gets a weaker prior than the last ($\lambda$ of 0.201 against 0.716).
-# `trained.posterior` is a Laplace posterior like any other, fit at the kept epoch
-# with the learned $\lambda$ and $\sigma$, so `lk.predict` takes it as it is.
+# `train` kept epoch 196 of 200, the one with the highest evidence.
+# The learned $\sigma$ is 0.307, close to the 0.3 we used to make the data.
+# The first layer gets a weaker prior than the last ($\lambda$ of 0.201 against 0.716).
+# `trained.posterior` is a Laplace posterior like any other, fitted at the kept epoch with the learned $\lambda$ and $\sigma$, so `lk.predict` takes it as it is.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# With hyperparameters $h$ (here $\lambda$ per layer and $\sigma$), the
-# Laplace approximation of the log marginal likelihood at the weights
-# $\theta_*$ is
+# With hyperparameters $h$ (here $\lambda$ per layer and $\sigma$), the Laplace approximation of the log marginal likelihood at the weights $\theta_*$ is
 #
 # $$
 #   \log p(\mathcal{D} \mid h) \approx \log p(\mathcal{D} \mid \theta_*, h) + \log p(\theta_* \mid h) - \tfrac{1}{2} \log \det \tfrac{1}{2 \pi} \big(\Lambda(h) + N G\big) ,
 # $$
 #
-# with $\Lambda(h)$ the prior precision and $G$ the GGN. Immer et al.
-# (2021)[^immer2021] alternate between fitting $\theta$ and $h$:
+# with $\Lambda(h)$ the prior precision and $G$ the GGN.
+# Immer et al. (2021)[^immer2021] alternate between fitting $\theta$ and $h$:
 #
 # 1. One epoch of gradient steps on $\theta$ for $-\log p(\mathcal{D} \mid \theta, h) - \log p(\theta \mid h)$.
 # 2. After every `marglik_frequency` epochs (1 by default), a Laplace fit at the current $\theta$.
 # 3. A few gradient steps on $\log h$ for the negative log marginal likelihood above.
 #
-# The network kept at the end is the one from the epoch with the highest
-# evidence.
+# The network kept at the end is the one from the epoch with the highest evidence.
 # :::
 #
 # The full tutorial: [Marginal-likelihood training](../examples/marglik.py)

@@ -2,10 +2,8 @@
 title: Overview
 ---
 
-A plugin is a Python package that adds something to **laplacekit**: a curvature,
-a prior, a likelihood, a way to pick parameters, or a front door for another
-library's models. Users install it and pass its objects where a built-in would
-go:
+A plugin is a Python package that adds something to **laplacekit**: a curvature, a prior, a likelihood, a way to pick parameters, or a front door for another library's models.
+Users install it and pass its objects where a built-in would go:
 
 ```python
 import laplacekit as lk
@@ -17,19 +15,20 @@ post = lk.laplace(
 
 ## Do you need one?
 
-Often not. `lk.laplace` takes any object with the right methods, so a
-likelihood or a subset defined in your own script works as it is. [Custom
-likelihood](../quickstart/likelihoods.py) does exactly that. You need a plugin
-when other people should be able to `pip install` your method, or when you want
-it tested and versioned on its own.
+Often not.
+`lk.laplace` takes any object with the right methods, so a likelihood or a subset defined in your own script works as it is.
+[Custom likelihood](../quickstart/likelihoods.py) does exactly that.
+You need a plugin when other people should be able to `pip install` your method, or when you want it tested and versioned on its own.
 
 ## What a plugin can add
 
-Each kind of contribution is a protocol in `laplacekit.core`. There is no base
-class to inherit from, and `lk.laplace` never looks anything up by name: an
-object with the right methods is accepted. If protocols are new to you, read [Protocols
-in one page](protocols.py) first. The entry point a package declares
-only lists it in `lk.plugins()` and `lk.health()`.
+Each kind of contribution is a protocol in `laplacekit.core`.
+`lk.laplace` accepts any object with the right methods and never looks anything up by name.
+You may subclass the protocol so that your editor checks your class, but you don't have to.
+If protocols are new to you, read [Protocols in one page](protocols.py) first.
+
+A package also declares an entry point.
+It only lists the plugin in `lk.plugins()` and `lk.health()`; nothing else depends on it.
 
 | Kind | Protocol | Where it goes |
 | --- | --- | --- |
@@ -40,18 +39,17 @@ only lists it in `lk.plugins()` and `lk.health()`.
 | [A predictive](predictive.py) | `Predictive` | `lk.predict(post, x, method)` |
 | [A curvature](curvature.py) | `Curvature`, `Staged` | `lk.laplace(..., hessian_approx=)` |
 | [A function-space approximation](function_space.py) | `function_space.FunctionSpaceMethod` | `lk.function_space.laplace(..., method=)` |
-| [A library integration](integration.py) | the above, plus a `ModelFn` | its own front door, e.g. `lk.diffusers.laplace` |
+| [A library integration](integration.py) | the above, plus a `ModelFn` | its own front door, e.g., `lk.diffusers.laplace` |
 
-The rows go from the smallest contract to the largest. [Your first
-plugin](first.py) starts at the top, with a subset, and ships it as a package.
+The rows go from the smallest contract to the largest.
 Each row links to its guide, with a worked example and its test.
+[Your first plugin](first.py) starts at the top, with a subset, and ships it as a package.
 
 ## First-party and third-party
 
-Some plugins are first-party: the **laplacekit** author curates them as part of
-**laplacekit**, and they come with an extra and an `lk.` alias. The rest are
-third-party: anyone can publish one from their own repository. Mechanically the
-two are the same:
+Some plugins are first-party: the **laplacekit** author curates them as part of **laplacekit**, and they come with an extra and an `lk.` alias.
+The rest are third-party: anyone can publish one from their own repository.
+Mechanically, the two are the same:
 
 | | First-party | Third-party |
 | --- | --- | --- |
@@ -63,8 +61,8 @@ two are the same:
 | Install | `pip install "laplacekit[transformers]"` | `pip install` with the package's name |
 | Reached as | `lk.transformers` | an import of the package |
 
-Apart from curation, only the last two rows differ, and both are
-conveniences: a first-party plugin can do nothing a third-party one can't. [Plugin or pull
-request?](plugin-or-pr.qmd) says when a plugin becomes first-party.
+Apart from curation, only the last two rows differ, and both are conveniences.
+A first-party plugin can do nothing that a third-party one can't.
+[Plugin or pull request?](plugin-or-pr.qmd) says when a plugin becomes first-party.
 
 The [plugin list](index.qmd) shows the plugins we know of.

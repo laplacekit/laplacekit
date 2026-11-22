@@ -4,14 +4,12 @@
 # jupyter: python3
 # ---
 #
-# When the noise changes with the input, the network should predict it too. Our
-# data are a sine with noise that grows away from the origin, and a gap in the
-# middle with no data at all.
+# When the noise changes with the input, the network should predict it too.
+# Our data are a sine with noise that grows away from the origin, and a gap in the middle with no data at all.
 #
 # ::: {.callout-note title="Plugin"}
-# This page uses the
-# [`laplacekit-heteroscedastic`](https://github.com/laplacekit/laplacekit/tree/main/plugins/heteroscedastic)
-# plugin. Install it with
+# This page uses the [`laplacekit-heteroscedastic`](https://github.com/laplacekit/laplacekit/tree/main/plugins/heteroscedastic) plugin.
+# Install it with:
 #
 # ```bash
 # pip install "laplacekit[heteroscedastic]"
@@ -34,10 +32,9 @@ y = torch.sin(2 * x) + (0.05 + 0.15 * x.abs()) * torch.randn(150, 1)
 x_test = torch.linspace(-4.0, 4.0, 201).reshape(-1, 1)
 
 # %% [markdown]
-# The network has two outputs, which `lk.heteroscedastic.NaturalHead` turns
-# into the natural parameters of a Gaussian. The likelihood,
-# `lk.heteroscedastic.NaturalGaussian`, reads them, and we train with its
-# negative log-likelihood.
+# The network has two outputs, which `lk.heteroscedastic.NaturalHead` turns into the natural parameters of a Gaussian.
+# The likelihood, `lk.heteroscedastic.NaturalGaussian`, reads them.
+# We train with its negative log-likelihood.
 
 # %%
 lik = lk.heteroscedastic.NaturalGaussian()
@@ -57,8 +54,8 @@ for _ in range(1000):
     opt.step()
 
 # %% [markdown]
-# The fit is the usual call. The network is small, so we take all of its
-# weights and a dense GGN for each layer.
+# The fit is the usual call.
+# The network is small, so we take all of its weights and a dense GGN for each layer.
 
 # %%
 post = lk.laplace(
@@ -71,10 +68,8 @@ post = lk.laplace(
 print(post)
 
 # %% [markdown]
-# `lk.predict` gives a Normal whose variance is the sum of two parts, and
-# `lk.heteroscedastic.moments` returns them one by one: the epistemic part,
-# from our uncertainty over the weights, and the aleatoric part, the noise the
-# network predicts.
+# `lk.predict` gives a Normal whose variance is the sum of two parts.
+# `lk.heteroscedastic.moments` returns them one by one: the epistemic part, from our uncertainty over the weights, and the aleatoric part, the noise the network predicts.
 
 # %%
 pred = lk.predict(post, x_test)
@@ -110,38 +105,32 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# On the data, the network gets the noise roughly right: a standard deviation
-# of 0.238 at x = 1, where the truth is 0.200, and 0.380 at x = 3, where it is
-# 0.500. Past the data the predicted noise drops, to 0.209 at x = 4
-# against a true 0.650. The epistemic part grows there, from 0.240 at x = 3 to
-# 0.334 at x = 4, and makes up only some of the difference. Between the two
-# clusters the network has seen nothing, and the epistemic standard deviation
-# at x = 0 is 42.7, far off the plot.
+# On the data, the network gets the noise roughly right: a standard deviation of 0.238 at $x = 1$, where the truth is 0.200, and 0.380 at $x = 3$, where it is 0.500.
+# Past the data, the predicted noise drops, to 0.209 at $x = 4$ against a true 0.650.
+# The epistemic part grows there, from 0.240 at $x = 3$ to 0.334 at $x = 4$, but makes up only some of the difference.
+# Between the two clusters, the network has seen nothing, and the epistemic standard deviation at $x = 0$ is 42.7, far off the plot.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# A Gaussian $\mathcal{N}(y \mid \mu, \sigma^2)$ in its natural parameters
-# $\eta = (\eta_1, \eta_2) = (\mu / \sigma^2, -1 / (2 \sigma^2))$ is
+# A Gaussian $\mathcal{N}(y \mid \mu, \sigma^2)$ in its natural parameters $\eta = (\eta_1, \eta_2) = (\mu / \sigma^2, -1 / (2 \sigma^2))$ is
 #
 # $$
 #   p(y \mid \eta) = \exp\big(\eta_1 y + \eta_2 y^2 - A(\eta)\big) / \sqrt{2 \pi} ,
 #   \qquad A(\eta) = -\frac{\eta_1^2}{4 \eta_2} - \frac{1}{2} \log(-2 \eta_2) ,
 # $$
 #
-# so $\mu = -\eta_1 / (2 \eta_2)$ and $\sigma^2 = -1 / (2 \eta_2)$, and the head
-# keeps $\eta_2 < 0$. The Hessian of $-\log p(y \mid \eta)$ in $\eta$ is
-# $\nabla^2 A(\eta)$ whatever $y$ is. It is the Fisher, and it is positive
-# semi-definite, so the GGN $J^\top \nabla^2 A(\eta) J$ is a valid curvature
-# (Immer et al., 2023).
+# so $\mu = -\eta_1 / (2 \eta_2)$ and $\sigma^2 = -1 / (2 \eta_2)$.
+# The head keeps $\eta_2 < 0$.
+# The Hessian of $-\log p(y \mid \eta)$ in $\eta$ is $\nabla^2 A(\eta)$ whatever $y$ is.
+# It is the Fisher, and it is positive semi-definite, so the GGN $J^\top \nabla^2 A(\eta) J$ is a valid curvature (Immer et al., 2023).
 #
-# With the Gaussian $\mathcal{N}(\hat\eta(x), \Sigma_\eta(x))$ over the
-# outputs from the linearized network, the predictive is
+# With the Gaussian $\mathcal{N}(\hat\eta(x), \Sigma_\eta(x))$ over the outputs from the linearized network, the predictive is
 #
 # $$
 #   p(y \mid x, \mathcal{D}) \approx \mathcal{N}\big(y \mid \mu(\hat\eta), \; g^\top \Sigma_\eta g + \sigma^2(\hat\eta)\big) ,
 #   \qquad g = \nabla_\eta \mu = (\sigma^2, 2 \mu \sigma^2) ,
 # $$
 #
-# the epistemic variance $g^\top \Sigma_\eta g$ plus the aleatoric one.
+# i.e., the epistemic variance $g^\top \Sigma_\eta g$ plus the aleatoric one.
 # :::
 #
 # The full tutorial: [Heteroscedastic regression](../examples/heteroscedastic.py)

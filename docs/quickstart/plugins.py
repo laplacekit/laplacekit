@@ -4,17 +4,15 @@
 # jupyter: python3
 # ---
 #
-# A plugin is a separate package that adds methods to **laplacekit**. We
-# install
-# [`laplacekit-subnet`](https://github.com/laplacekit/laplacekit/tree/main/plugins/subnet), which picks a subnetwork of weights for the
-# Laplace approximation.
+# A plugin is a separate package that adds methods to **laplacekit**.
+# We install [`laplacekit-subnet`](https://github.com/laplacekit/laplacekit/tree/main/plugins/subnet), which picks a subnetwork of weights for the Laplace approximation.
 #
 # ```bash
 # pip install "laplacekit[subnet]"
 # ```
 #
-# A plugin's method goes where a built-in one would. Here the subnetwork goes in
-# as `subset=`: the 100 weights with the largest magnitude.
+# A plugin's method goes wherever a built-in one goes.
+# Here, the subnetwork goes in as `subset=`: the 100 weights with the largest magnitude.
 
 # %%
 import torch
@@ -49,9 +47,9 @@ post = lk.laplace(
 print(post)
 
 # %% [markdown]
-# Installing a plugin changes no defaults: without `subset=`, `lk.laplace` takes
-# the last layer, as before. The plugin is reached as `lk.subnet`, which imports
-# it on first use.
+# Installing a plugin changes no defaults.
+# Without `subset=`, `lk.laplace` still takes the last layer.
+# The plugin is reached as `lk.subnet`, which imports it on first use.
 #
 # ## What is installed
 #
@@ -61,27 +59,23 @@ print(post)
 print(lk.plugins())
 
 # %% [markdown]
-# `laplacekit-example` is the docs' own example from [Your first
-# plugin](../plugins/first.py), installed with the docs and never published.
+# `laplacekit-example` is the docs' own example from [Your first plugin](../plugins/first.py), installed with the docs and never published.
 #
-# `lk.health()` checks the install: the core first, then each plugin, with its
-# own checks.
+# `lk.health()` checks the install: the core first, then each plugin with its own checks.
 
 # %%
 print(lk.health())
 
 # %% [markdown]
 # ::: {.callout-note collapse="true" title="The math"}
-# Subnetwork Laplace ([Daxberger et al., 2021](https://arxiv.org/abs/2010.14689))
-# keeps a Gaussian over $S$ chosen weights $\theta_S$ and fixes the others at
-# their trained values,
+# Subnetwork Laplace ([Daxberger et al., 2021](https://arxiv.org/abs/2010.14689)) keeps a Gaussian over $S$ chosen weights $\theta_S$ and fixes the others at their trained values,
 #
 # $$
 #   p(\theta_S \mid \mathcal{D}) \approx \mathcal{N}\big(\hat\theta_S, (\lambda I + G_S)^{-1}\big) ,
 # $$
 #
-# where $G_S$ is the GGN restricted to those weights. With $S$ small, $G_S$ fits
-# as a dense matrix.
+# where $G_S$ is the GGN restricted to those weights.
+# With $S$ small, $G_S$ fits as a dense matrix.
 # :::
 #
 # The full tutorial: [Subnetworks](subnetwork.py)

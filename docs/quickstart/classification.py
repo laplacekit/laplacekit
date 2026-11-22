@@ -4,9 +4,9 @@
 # jupyter: python3
 # ---
 #
-# A ReLU classifier is confident far away from its training data. A Laplace
-# approximation on its last layer makes it much less so. We train a small network on four
-# 2D blobs.
+# A ReLU classifier is confident far away from its training data.
+# A Laplace approximation on its last layer makes it much less so.
+# To see this, we train a small network on four 2D blobs.
 
 # %%
 import matplotlib.pyplot as plt
@@ -46,8 +46,9 @@ for _ in range(5000):
     opt.step()
 
 # %% [markdown]
-# The fit is one call. We take the weight decay as the prior precision and keep
-# it fixed. We also print the prior precision that the default tuning picks.
+# The fit is one call.
+# We take the weight decay as the prior precision and keep it fixed.
+# We also print the prior precision that the default tuning picks.
 
 # %%
 model.eval()
@@ -66,8 +67,7 @@ tuned = lk.laplace(
 print("tuned prior precision:", float(tuned.prior.prior_precision))
 
 # %% [markdown]
-# We plot the confidence, the highest class probability, on a grid that
-# reaches well past the data.
+# We plot the confidence, the highest class probability, on a grid that reaches well past the data.
 
 # %%
 lin = np.linspace(-15, 15, 50)
@@ -109,17 +109,16 @@ fig.colorbar(im, ax=list(axes), label="max class probability")
 plt.show()
 
 # %% [markdown]
-# The MAP network is sure of itself almost everywhere. The Laplace predictive
-# is sure near the data, and its confidence falls off away from it in every
-# direction. How fast it falls off depends on the prior. By default,
-# `lk.laplace` tunes the prior precision on the marginal likelihood. Here that
-# gives $\lambda \approx 1.05$ instead of the weight decay $5
-# \times 10^{-4}$, and with it the predictive stays confident far away in more
-# than half of the directions. The full tutorial compares the two.
+# The MAP network is sure of itself almost everywhere.
+# The Laplace predictive is sure near the data, and its confidence falls off away from it in every direction.
+# How fast it falls off depends on the prior.
+# By default, `lk.laplace` tunes the prior precision on the marginal likelihood.
+# Here, that gives $\lambda \approx 1.05$ instead of the weight decay $5 \times 10^{-4}$.
+# With it, the predictive stays confident far away in more than half of the directions.
+# The full tutorial compares the two.
 #
-# To use another $\lambda$, we fix it, or pick it by the NLL on held-out data
-# (a loader or a list of `(inputs, targets)` pairs), with L-BFGS (`lk.Minimize`)
-# or on a grid (`lk.GridSearch`):
+# To use another $\lambda$, we can fix it.
+# Or we can pick it by the NLL on held-out data (a loader or a list of `(inputs, targets)` pairs), either with L-BFGS (`lk.Minimize`) or on a grid (`lk.GridSearch`):
 #
 # ```python
 # post = lk.laplace(model, data, lik, prior=lk.priors.Isotropic(λ), hyper_tuner=None)
@@ -129,12 +128,12 @@ plt.show()
 #
 # ## Tuning for calibration
 #
-# The held-out objective doesn't have to be the NLL. `lk.objectives.brier` is
-# the Brier score and `lk.objectives.ece` the expected calibration error. We
-# draw 200 validation points from the same four blobs and pick $\lambda$ with
-# each. The ECE counts points in bins, so it has no gradient: `lk.Minimize`
-# refuses it, and we search a grid with `lk.GridSearch` instead. The Brier score
-# is smooth, so `lk.Minimize` works.
+# The held-out objective doesn't have to be the NLL.
+# `lk.objectives.brier` is the Brier score, and `lk.objectives.ece` the expected calibration error.
+# We draw 200 validation points from the same four blobs and pick $\lambda$ with each.
+# The ECE counts points in bins, so it has no gradient.
+# `lk.Minimize` refuses it, so we search a grid with `lk.GridSearch` instead.
+# The Brier score is smooth, so `lk.Minimize` works.
 
 # %%
 _, _, centers = make_blobs(
@@ -168,20 +167,18 @@ for name, p in [
     )
 
 # %% [markdown]
-# With the weight decay as the prior, the ECE is 0.089. The
-# marginal-likelihood $\lambda \approx 1.05$ brings it down to 0.023, and the
-# grid on the ECE picks $\lambda = 10$, with 0.020. The Brier score falls from
-# 0.060 to 0.037 with either. `lk.Minimize` on it keeps raising $\lambda$, to about
-# $1.2 \times 10^6$, where the posterior has almost no variance left, and gets
-# 0.036. On validation data like the training data, the Brier score prefers the
-# MAP network.
+# With the weight decay as the prior, the ECE is 0.089.
+# The marginal-likelihood $\lambda \approx 1.05$ brings it down to 0.023.
+# The grid on the ECE picks $\lambda = 10$, with 0.020.
+# The Brier score falls from 0.060 to 0.037 with either.
+# `lk.Minimize` on the Brier score keeps raising $\lambda$, to about $1.2 \times 10^6$, where the posterior has almost no variance left, and gets 0.036.
+# On validation data like the training data, the Brier score prefers the MAP network.
 #
 # ## Laplace bridge
 #
-# The probit is one way to turn the Gaussian over the logits into class
-# probabilities. The Laplace bridge is another: it matches a Dirichlet to the
-# Gaussian and predicts its mean. It is a link, like the probit, so we pass it
-# to `lk.Linearized`.
+# The probit is one way to turn the Gaussian over the logits into class probabilities.
+# The Laplace bridge is another: it matches a Dirichlet to the Gaussian and predicts its mean.
+# It is a link, like the probit, so we pass it to `lk.Linearized`.
 
 # %%
 bridge = (
@@ -215,24 +212,21 @@ print(
 )
 
 # %% [markdown]
-# The probit gives 0.446, but the plain bridge is about as confident as the
-# MAP network: 0.933 on average over the grid, against 0.936. Its mean depends
-# on the logit variances (after removing the shift shared by all logits) only
-# through their ratios across classes. Here they are large together, 2229 on
-# average with a median max/min of 2.3, so their size mostly cancels. The
-# normalized bridge, `lk.Bridge(normalized=True)`, folds the size back in by
-# dividing the logit mean by a factor that grows with the average variance, and
-# gives 0.390.
+# The probit gives 0.446.
+# But the plain bridge is about as confident as the MAP network: 0.933 on average over the grid, against 0.936.
+# Its mean depends on the logit variances (after removing the shift shared by all logits) only through their ratios across classes.
+# Here, they are all large, 2229 on average with a median max/min ratio of 2.3, so their size mostly cancels.
+# The normalized bridge, `lk.Bridge(normalized=True)`, folds the size back in by dividing the logit mean by a factor that grows with the average variance.
+# It gives 0.390.
 #
-# The bridge is for three classes or more. At two classes it ignores the
-# variances, so there we keep the probit, which is the default.
+# The bridge is for three classes or more.
+# With two classes, it ignores the variances, so there we keep the probit, which is the default.
 #
 # ## Binary and multi-label
 #
-# When each input can have several labels at once, every output is its own yes
-# or no. `lk.Bernoulli()` is the sigmoid likelihood for that, with targets of 0
-# and 1 shaped like the outputs. Our toy has three labels on the plane: "right
-# of the origin", "above it" and "within distance 2 of it".
+# When each input can have several labels at once, every output is its own yes-or-no question.
+# `lk.Bernoulli()` is the sigmoid likelihood for that, with targets of 0 and 1 shaped like the outputs.
+# Our toy has three labels on the plane: "right of the origin", "above it" and "within distance 2 of it".
 
 # %%
 torch.manual_seed(0)
@@ -255,8 +249,8 @@ post_b = lk.laplace(net, [(xb, yb)], likelihood=lk.Bernoulli())
 print(post_b)
 
 # %% [markdown]
-# `lk.predict` gives one probability per label. We ask at a point inside the
-# data and at one far outside it.
+# `lk.predict` gives one probability per label.
+# We ask at a point inside the data and at one far outside it.
 
 # %%
 points = torch.tensor([[1.0, 1.0], [20.0, 20.0]])
@@ -275,47 +269,38 @@ for pt, a, b in zip(
     )
 
 # %% [markdown]
-# The point (1, 1) has all three labels, and both are sure of them. The point
-# (20, 20) is right of and above the origin but far from it, and the MAP
-# network gives 1.0, 1.0 and 0.0. The Laplace probabilities there, 0.95, 0.93
-# and 0.01, are only a little less sure.
+# The point $(1, 1)$ has all three labels, and both the MAP and the Laplace predictive are sure of them.
+# The point $(20, 20)$ is right of and above the origin but far from it, and the MAP network gives 1.0, 1.0 and 0.0.
+# The Laplace probabilities there, 0.95, 0.93 and 0.01, are only a little less sure.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# Write the network as $f(x) = W \phi(x)$, with the last layer $W$ on top of the
-# features $\phi$. The Laplace approximation keeps $\phi$ fixed and puts a
-# Gaussian on $W$,
+# Write the network as $f(x) = W \phi(x)$, with the last layer $W$ on top of the features $\phi$.
+# The Laplace approximation keeps $\phi$ fixed and puts a Gaussian on $W$,
 #
 # $$
 #   p(W \mid \mathcal{D}) \approx \mathcal{N}\big(\mathrm{vec}(W) \mid \mathrm{vec}(W_*), (\lambda I + N G)^{-1}\big) ,
 # $$
 #
-# with $G$ the generalized Gauss-Newton matrix of the last layer and $\lambda$
-# the prior precision, here the weight decay. The logits are linear in $W$, so they are
-# Gaussian with mean $W_* \phi(x)$ and a covariance $V(x)$, and the probit
-# approximation gives
+# with $G$ the generalized Gauss-Newton matrix of the last layer and $\lambda$ the prior precision, here the weight decay.
+# The logits are linear in $W$, so they are Gaussian with mean $W_* \phi(x)$ and a covariance $V(x)$, and the probit approximation gives
 #
 # $$
 #   p(y \mid x, \mathcal{D}) \approx \mathrm{softmax}\Big(\frac{W_* \phi(x)}{\sqrt{1 + \frac{\pi}{8} \mathrm{diag} V(x)}}\Big) .
 # $$
 #
-# For a ReLU network, $\lVert \phi(x) \rVert$ grows away from the data, and so
-# does $V(x)$, which pulls the probabilities toward uniform. With two classes,
-# the probit is applied to the difference of the two logits, $f_1 - f_2$, with
-# its variance $v_d = V_{11} + V_{22} - 2 V_{12}$.
+# For a ReLU network, $\lVert \phi(x) \rVert$ grows away from the data, and so does $V(x)$, which pulls the probabilities toward uniform.
+# With two classes, the probit is applied to the difference of the two logits, $f_1 - f_2$, with its variance $v_d = V_{11} + V_{22} - 2 V_{12}$.
 #
-# A Bernoulli output is one logit $f_k$ per label, and each gets its own
-# sigmoid probit, $\sigma\big(\mu_k / \sqrt{1 + \frac{\pi}{8} V_{kk}(x)}\big)$.
+# A Bernoulli output is one logit $f_k$ per label, and each gets its own sigmoid probit, $\sigma\big(\mu_k / \sqrt{1 + \frac{\pi}{8} V_{kk}(x)}\big)$.
 #
-# The Laplace bridge (Hobbhahn et al., 2022) maps the logit mean $\mu$ and
-# variances $v$ (after removing the shift shared by all logits) to a Dirichlet
-# with
+# The Laplace bridge (Hobbhahn et al., 2022) maps the logit mean $\mu$ and variances $v$ (after removing the shift shared by all logits) to a Dirichlet with
 #
 # $$
 #   \alpha_k = \frac{1}{v_k} \Big(1 - \frac{2}{K} + \frac{e^{\mu_k}}{K^2} \sum_j e^{-\mu_j}\Big) ,
 # $$
 #
-# and predicts its mean $\alpha / \sum_j \alpha_j$. At $K = 2$ the two
-# variances are equal, so they cancel in that mean.
+# and predicts its mean $\alpha / \sum_j \alpha_j$.
+# At $K = 2$, the two variances are equal, so they cancel in that mean.
 # :::
 #
 # The full tutorial: [Classification](../examples/classification.py)

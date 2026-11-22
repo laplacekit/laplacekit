@@ -11,20 +11,19 @@
 # ```
 # :::
 #
-# The goal of this page is to show that a cheap, post-hoc Bayesian treatment of
-# a trained classifier fixes its overconfidence away from the data. We reproduce
-# the toy example of last-layer Laplace (Kristiadi et al., 2020)[^kristiadi2020]. The idea is as
-# follows. Suppose we have an $L$-layer network trained to its MAP estimate. We
-# treat the first $L - 1$ layers as a fixed feature map $\phi$, and apply a
-# Laplace approximation only to the last layer's weight matrix $W$. That is,
+# The goal of this page is to show that a cheap, post-hoc Bayesian treatment of a trained classifier fixes its overconfidence away from the data.
+# We reproduce the toy example of last-layer Laplace (Kristiadi et al., 2020)[^kristiadi2020].
+# The idea is as follows.
+# Suppose we have an $L$-layer network trained to its MAP estimate.
+# We treat the first $L - 1$ layers as a fixed feature map $\phi$, and apply a Laplace approximation only to the last layer's weight matrix $W$.
+# That is,
 #
 # $$
 #   p(W \mid \mathcal{D}) \approx \mathcal{N}(\mathrm{vec}(W) \mid \mathrm{vec}(W_\text{MAP}), \Lambda^{-1}) , \qquad \Lambda = \lambda I + N G ,
 # $$
 #
-# where $\lambda$ is the prior precision, $N$ the number of training points, and
-# $G$ the generalized Gauss-Newton matrix of the last layer, averaged over the
-# data. Since the last layer is small, we can afford all of $G$.
+# where $\lambda$ is the prior precision, $N$ the number of training points, and $G$ the generalized Gauss-Newton matrix of the last layer, averaged over the data.
+# Since the last layer is small, we can afford all of $G$.
 
 # %%
 import matplotlib.pyplot as plt
@@ -39,10 +38,10 @@ import laplacekit as lk
 # ## Data and model
 #
 # First, we create a toy 4-class dataset $\mathcal{D}$ with $N = 500$ points.
-# The network is a two-layer ReLU feature extractor with batch norm, followed by
-# a linear last layer without bias. We train it full batch with weight decay $5
-# \times 10^{-4}$. Note that the weight decay can be seen as the precision of a
-# Gaussian prior. We use it as $\lambda$ for the Laplace approximation below.
+# The network is a two-layer ReLU feature extractor with batch norm, followed by a linear last layer without bias.
+# We train it full batch with weight decay $5 \times 10^{-4}$.
+# Note that the weight decay can be seen as the precision of a Gaussian prior.
+# We use it as $\lambda$ for the Laplace approximation below.
 
 # %%
 x_np, y_np = make_blobs(
@@ -81,9 +80,8 @@ print("final loss:", round(loss.item(), 3))
 # %% [markdown]
 # ## One line
 #
-# `lk.laplace` takes the trained model, an iterable of `(inputs, targets)`
-# batches, and a likelihood. We set $\lambda$ to the weight decay and switch off
-# its tuning, which we come back to later.
+# `lk.laplace` takes the trained model, an iterable of `(inputs, targets)` batches, and a likelihood.
+# We set $\lambda$ to the weight decay and switch off its tuning for now; we come back to it later.
 
 # %%
 post = lk.laplace(
@@ -96,11 +94,10 @@ post = lk.laplace(
 print(post)
 
 # %% [markdown]
-# Printing the posterior shows what `lk.laplace` chose. By default, it takes the
-# last layer (`params`) and the dense GGN for it (`approx`). Here $W$ is $4
-# \times 20$, so $G$ is an $80 \times 80$ matrix, and `n_data` is $N$. Each
-# choice can be passed explicitly, e.g. `hessian_approx=lk.DiagGGN()` or
-# `subset=lk.subsets.all`.
+# Printing the posterior shows what `lk.laplace` chose.
+# By default, it takes the last layer (`params`) and the dense GGN for it (`approx`).
+# Here, $W$ is $4 \times 20$, so $G$ is an $80 \times 80$ matrix, and `n_data` is $N$.
+# Each choice can be passed explicitly, e.g., `hessian_approx=lk.DiagGGN()` or `subset=lk.subsets.all`.
 #
 # ## Confidence away from the data
 #
@@ -110,22 +107,19 @@ print(post)
 #   p(y \mid x, \mathcal{D}) = \int \mathrm{softmax}(W \phi(x)) \, p(W \mid \mathcal{D}) \, dW .
 # $$
 #
-# This integral is intractable. However, notice that the logits $f = W \phi(x)$
-# are linear in $W$, so under the Laplace posterior they are Gaussian,
-# $\mathcal{N}(f \mid m(x), V(x))$ with $m(x) = W_\text{MAP} \phi(x)$ and $V(x)
-# = J(x) \Lambda^{-1} J(x)^\top$, where $J(x)$ is the Jacobian of the logits
-# with respect to $\mathrm{vec}(W)$. The default predictive then uses the probit
-# approximation,
+# This integral is intractable.
+# However, notice that the logits $f = W \phi(x)$ are linear in $W$.
+# So, under the Laplace posterior, they are Gaussian, $\mathcal{N}(f \mid m(x), V(x))$ with $m(x) = W_\text{MAP} \phi(x)$ and $V(x) = J(x) \Lambda^{-1} J(x)^\top$, where $J(x)$ is the Jacobian of the logits with respect to $\mathrm{vec}(W)$.
+# The default predictive then uses the probit approximation,
 #
 # $$
 #   p(y = k \mid x, \mathcal{D}) \approx \mathrm{softmax}_k \left( \frac{m(x)}{\sqrt{1 + \frac{\pi}{8} \, \mathrm{diag} \, V(x)}} \right) ,
 # $$
 #
-# with the division taken elementwise, after subtracting the mean over the
-# classes from the logits.
+# with the division taken elementwise, after subtracting the mean over the classes from the logits.
 #
-# The plots show the confidence, i.e. the highest class probability, on a grid
-# that reaches well past the data. Both panels share the same color levels.
+# The plots show the confidence, i.e., the highest class probability, on a grid that reaches well past the data.
+# Both panels share the same color levels.
 
 # %%
 lin = np.linspace(-15, 15, 50)
@@ -176,13 +170,10 @@ fig = show([map_conf, lap_conf], ["MAP", "Last-layer Laplace"])
 plt.show()
 
 # %% [markdown]
-# Notice how the MAP network is confident almost everywhere, even far from the
-# data. The Laplace predictive is confident only near the training points and
-# falls toward chance, $0.25$, away from them. This is because, for a ReLU
-# network, $\lVert \phi(x) \rVert$ grows as $x$ moves away from the data, and
-# with it the variance $V(x)$. Below are the mean confidences on the training
-# points and on the grid points more than 5 units away from every training
-# point.
+# Notice how the MAP network is confident almost everywhere, even far from the data.
+# The Laplace predictive is confident only near the training points and falls toward chance, $0.25$, away from them.
+# This is because, for a ReLU network, $\lVert \phi(x) \rVert$ grows as $x$ moves away from the data, and with it the variance $V(x)$.
+# To put numbers on this, we compute the mean confidence on the training points and on the grid points more than 5 units away from every training point.
 
 # %%
 far = torch.tensor([bool((torch.cdist(g[None], x) > 5).all()) for g in grid])
@@ -200,13 +191,12 @@ summarize("Laplace", lap_on, lap_conf)
 # %% [markdown]
 # ## The prior
 #
-# So far, $\lambda$ was the weight decay. By default, `lk.laplace` instead picks
-# $\lambda$ by maximizing the log marginal likelihood (see [Choosing a
-# curvature](curvature.py) for its formula). Here, it picks a $\lambda$ much
-# larger than the weight decay, printed below. A larger $\lambda$ shrinks
-# $\Lambda^{-1}$, and with it $V(x)$, so the predictive is confident over a much
-# wider region, and the mean confidence far away goes up. That is, the prior
-# decides how fast the confidence falls off away from the data.
+# So far, $\lambda$ was the weight decay.
+# By default, `lk.laplace` instead picks $\lambda$ by maximizing the log marginal likelihood (see [Choosing a curvature](curvature.py) for its formula).
+# Here, it picks a $\lambda$ much larger than the weight decay, printed below.
+# A larger $\lambda$ shrinks $\Lambda^{-1}$, and with it $V(x)$.
+# So the predictive is confident over a much wider region, and the mean confidence far away goes up.
+# That is, the prior decides how fast the confidence falls off away from the data.
 
 # %%
 tuned = lk.laplace(model, loader, likelihood=lk.Categorical())
@@ -218,19 +208,15 @@ fig2 = show([lap_conf, tuned_conf], ["Prior = weight decay", "Tuned prior"])
 plt.show()
 
 # %% [markdown]
-# The tuned $\lambda$ is about 1.05, and the mean confidence far away goes from
-# 0.33 to 0.76. The marginal likelihood only looks at the training data, so
-# nothing in it asks for low confidence far from the data. When we want the
-# faster fall-off, we keep a small $\lambda$ of our own with `prior=` and
-# `hyper_tuner=None`, as above.
+# The tuned $\lambda$ is about 1.05, and the mean confidence far away goes from 0.33 to 0.76.
+# The marginal likelihood only looks at the training data, so nothing in it asks for low confidence far from the data.
+# If we want the faster fall-off, we keep a small $\lambda$ of our own with `prior=` and `hyper_tuner=None`, as above.
 #
 # ## Choosing λ by calibration
 #
-# Instead of the marginal likelihood, we can pick $\lambda$ by how well the
-# predictive does on held-out data $\mathcal{D}_\text{val} = \{(x_m, y_m)\}_{m=1}^M$.
-# Writing $p_m = p(y \mid x_m, \mathcal{D})$ for the predictive probabilities at
-# $x_m$, the three objectives in `lk.objectives` are the negative log
-# predictive density, the Brier score, and the expected calibration error (ECE):
+# Instead of the marginal likelihood, we can pick $\lambda$ by how well the predictive does on held-out data $\mathcal{D}_\text{val} = \{(x_m, y_m)\}_{m=1}^M$.
+# Write $p_m = p(y \mid x_m, \mathcal{D})$ for the predictive probabilities at $x_m$.
+# The three objectives in `lk.objectives` are the negative log predictive density, the Brier score, and the expected calibration error (ECE):
 #
 # $$
 #   \mathrm{NLL} = -\frac{1}{M} \sum_{m=1}^M \log p_{m, y_m} , \qquad
@@ -238,18 +224,14 @@ plt.show()
 #   \mathrm{ECE} = \sum_{b=1}^{B} \frac{\lvert I_b \rvert}{M} \, \big\lvert \mathrm{acc}(I_b) - \mathrm{conf}(I_b) \big\rvert ,
 # $$
 #
-# where $e_y$ is the one-hot vector of class $y$, and $I_b$ holds the points
-# whose confidence $\max_k p_{m,k}$ falls into the $b$-th of $B = 15$ equal-width
-# bins. In each bin, $\mathrm{acc}$ is the fraction of correct predictions and
-# $\mathrm{conf}$ the mean confidence. The ECE counts points in bins, so it has
-# no gradient in $\lambda$. Hence, we pick $\lambda$ with all four objectives,
-# the marginal likelihood included, by `lk.GridSearch` over the same candidates,
-# from $10^{-4}$ to $10^7$. An objective is any function from a posterior to a
-# scalar, so the marginal likelihood is `lambda p: -p.log_marglik()`.
+# where $e_y$ is the one-hot vector of class $y$, and $I_b$ holds the points whose confidence $\max_k p_{m,k}$ falls into the $b$-th of $B = 15$ equal-width bins.
+# In each bin, $\mathrm{acc}$ is the fraction of correct predictions and $\mathrm{conf}$ the mean confidence.
+# The ECE counts points in bins, so it has no gradient in $\lambda$.
+# Hence, we pick $\lambda$ with all four objectives, the marginal likelihood included, by running `lk.GridSearch` over the same candidates, from $10^{-4}$ to $10^7$.
+# An objective is any function from a posterior to a scalar, so the marginal likelihood is `lambda p: -p.log_marglik()`.
 #
-# The validation split has 200 new points drawn from the same four blobs. For
-# each choice, we print $\lambda$, the three validation scores, and the mean
-# confidence far from the data.
+# The validation split has 200 new points drawn from the same four blobs.
+# For each choice, we print $\lambda$, the three validation scores, and the mean confidence far from the data.
 
 # %%
 _, _, centers = make_blobs(
@@ -296,32 +278,25 @@ for name, p in {"weight decay": post, **picked}.items():
     )
 
 # %% [markdown]
-# On the grid, the marginal likelihood picks $\lambda = 1$, next to the 1.05
-# that the default tuner found above. All three held-out objectives go for more: the
-# NLL picks $\lambda \approx 178$, the ECE $\lambda = 10$, and the Brier score
-# $\lambda = 10^6$, where the posterior has almost no variance left and the
-# predictive is the MAP network's. With `lk.Minimize` instead of the grid, the
-# Brier score keeps raising $\lambda$ to about $1.2 \times 10^6$. The scores of
-# the three choices barely differ: the NLL is 0.082 or 0.083 and the Brier
-# score 0.036 or 0.037. Against the weight decay, which gives an NLL of 0.170 and
-# an ECE of 0.089, every tuned $\lambda$ does better on the validation points.
+# On the grid, the marginal likelihood picks $\lambda = 1$, next to the 1.05 that the default tuner found above.
+# All three held-out objectives go for more: the NLL picks $\lambda \approx 178$, the ECE $\lambda = 10$, and the Brier score $\lambda = 10^6$.
+# At $\lambda = 10^6$, the posterior has almost no variance left, and the predictive is the MAP network's.
+# With `lk.Minimize` instead of the grid, the Brier score keeps raising $\lambda$ to about $1.2 \times 10^6$.
+# The scores of the three choices barely differ: the NLL is 0.082 or 0.083, and the Brier score 0.036 or 0.037.
+# Against the weight decay, which gives an NLL of 0.170 and an ECE of 0.089, every tuned $\lambda$ does better on the validation points.
 #
-# Far from the data, the picture is different. The validation points come
-# from the same blobs as the training points, so none of these objectives sees
-# that region. There, the marginal likelihood keeps a mean confidence of 0.75,
-# the ECE 0.88, the NLL 0.92 and the Brier score 0.93, as high as the MAP
-# network. Good calibration on data like the training data says nothing about
-# the confidence away from it. For low confidence far away, we need validation
-# data that reaches that far, or a small $\lambda$ of our own.
+# Far from the data, the picture is different.
+# The validation points come from the same blobs as the training points, so none of these objectives sees that region.
+# There, the mean confidence is 0.75 with the marginal likelihood's $\lambda$, 0.88 with the ECE's, 0.92 with the NLL's, and 0.93 with the Brier score's, as high as the MAP network.
+# So good calibration on data like the training data says nothing about the confidence away from it.
+# For low confidence far away, we need validation data that reaches that far, or a small $\lambda$ of our own.
 #
 # ## Laplace bridge
 #
-# The probit approximation is not the only way to integrate the softmax
-# against the Gaussian $\mathcal{N}(f \mid \mu, \Sigma)$ over the logits. The
-# Laplace bridge (Hobbhahn et al., 2022)[^hobbhahn2022] maps it to a Dirichlet
-# distribution $\mathrm{Dir}(\pi \mid \alpha)$ over the class probabilities
-# $\pi$ instead. The Dirichlet has a Laplace approximation of its own in the
-# softmax basis, a Gaussian over the logits, and the bridge inverts that map.
+# The probit approximation is not the only way to integrate the softmax against the Gaussian $\mathcal{N}(f \mid \mu, \Sigma)$ over the logits.
+# The Laplace bridge (Hobbhahn et al., 2022)[^hobbhahn2022] maps it to a Dirichlet distribution $\mathrm{Dir}(\pi \mid \alpha)$ over the class probabilities $\pi$ instead.
+# The Dirichlet has a Laplace approximation of its own in the softmax basis, which is a Gaussian over the logits.
+# The bridge inverts that map.
 # Given the logit means $\mu_k$ and variances $v_k$ of $K$ classes, it gives
 #
 # $$
@@ -330,9 +305,8 @@ for name, p in {"weight decay": post, **picked}.items():
 #   p(y = k \mid x, \mathcal{D}) \approx \mathbb{E}_{\mathrm{Dir}(\pi \mid \alpha)}[\pi_k] = \frac{\alpha_k}{\sum_j \alpha_j} .
 # $$
 #
-# The softmax ignores a shift shared by all logits, and the bridge assumes the
-# logits carry none. So before the formula we condition the Gaussian on
-# $\mathbf{1}^\top f = 0$:
+# The softmax ignores a shift shared by all logits, and the bridge assumes the logits carry none.
+# So, before applying the formula, we condition the Gaussian on $\mathbf{1}^\top f = 0$:
 #
 # $$
 #   \mu' = \mu - \frac{\Sigma \mathbf{1} \, \mathbf{1}^\top \mu}{\mathbf{1}^\top \Sigma \mathbf{1}} ,
@@ -340,16 +314,14 @@ for name, p in {"weight decay": post, **picked}.items():
 #   v'_k = \Sigma_{kk} - \frac{(\Sigma \mathbf{1})_k^2}{\mathbf{1}^\top \Sigma \mathbf{1}} ,
 # $$
 #
-# and use $\mu'$ and $v'$ in place of $\mu$ and $v$. Notice that multiplying
-# every $v'_k$ by the same factor multiplies every $\alpha_k$ by its inverse,
-# which cancels in $\alpha_k / \sum_j \alpha_j$. The mean of the plain bridge
-# thus sees the variances only through their ratios across classes. The
-# normalized bridge puts their size back in. It divides $\mu'$ by $\sqrt{c}$,
-# with $c = \bar{v}' / \sqrt{K / 2}$ and $\bar{v}'$ the average of the $v'_k$.
+# and use $\mu'$ and $v'$ in place of $\mu$ and $v$.
+# Notice that multiplying every $v'_k$ by the same factor multiplies every $\alpha_k$ by its inverse, which cancels in $\alpha_k / \sum_j \alpha_j$.
+# The mean of the plain bridge thus sees the variances only through their ratios across classes.
+# The normalized bridge puts their size back in.
+# It divides $\mu'$ by $\sqrt{c}$, with $c = \bar{v}' / \sqrt{K / 2}$ and $\bar{v}'$ the average of the $v'_k$.
 #
-# The bridge is a link, like the probit, so we pass it to `lk.Linearized`. We
-# use the posterior with the weight decay as the prior again and compare the
-# three links on the confidence plots from before.
+# The bridge is a link, like the probit, so we pass it to `lk.Linearized`.
+# We use the posterior with the weight decay as the prior again, and compare the three links on the confidence plots from before.
 
 # %%
 bridge = lk.Linearized(link=lk.Bridge())
@@ -371,9 +343,8 @@ fig3 = show(
 plt.show()
 
 # %% [markdown]
-# The plain bridge is as confident as the MAP network, both on the data and
-# far away. To see why, we compute the shift-corrected variances $v'$ on the
-# grid points far from the data.
+# The plain bridge is as confident as the MAP network, both on the data and far away.
+# To see why, we compute the shift-corrected variances $v'$ on the grid points far from the data.
 
 # %%
 cov = lk.predict_outputs(post, grid[far]).cov.per_input()  # [points, 4, 4]
@@ -386,27 +357,21 @@ print(
 )
 
 # %% [markdown]
-# Far away, the corrected variances are huge, 4165 on average, but they are
-# huge together: the largest is a median 2.1 times the smallest. Their size
-# cancels in the mean of the plain bridge, and what is left is close to the
-# softmax of $\mu'$. The
-# normalized bridge divides the logits by the root of that size, and its
-# confidence far away drops to 0.32, close to the probit's 0.33. On the data,
-# though, it is the least confident of the three, at 0.73.
+# Far away, the corrected variances are huge, 4165 on average, but they are all huge: the largest is, by the median, only 2.1 times the smallest.
+# Their size cancels in the mean of the plain bridge, and what is left is close to the softmax of $\mu'$.
+# The normalized bridge divides the logits by the root of that size, and its confidence far away drops to 0.32, close to the probit's 0.33.
+# On the data, though, it is the least confident of the three, at 0.73.
 #
-# With two classes, $v'_1 = v'_2$ always, since $\mathbf{1}^\top f = 0$ ties
-# $f_2$ to $-f_1$. Then $\alpha_k \propto e^{\mu'_k}$, and the plain bridge is
-# the softmax of $\mu'$, whatever the covariance. For $K = 2$ we therefore keep
-# the probit, which is the default.
+# With two classes, $v'_1 = v'_2$ always, since $\mathbf{1}^\top f = 0$ ties $f_2$ to $-f_1$.
+# Then $\alpha_k \propto e^{\mu'_k}$, and the plain bridge is the softmax of $\mu'$, whatever the covariance.
+# For $K = 2$, we therefore keep the probit, which is the default.
 #
 # ## Under the hood
 #
-# `lk.laplace` is a thin composition of public steps. It wraps the model as a
-# function of its parameters, probes what it supports, picks the parameters
-# and the curvature, folds the batches into a statistic, and combines the
-# result with the prior into a posterior. Then it tunes $\lambda$. [Step by
-# step](by_hand.py) runs each of these by hand on the model of this page, so
-# that we can replace any of them with our own code.
+# `lk.laplace` is a thin composition of public steps.
+# It wraps the model as a function of its parameters, probes what it supports, and picks the parameters and the curvature.
+# Then it folds the batches into a statistic, combines the result with the prior into a posterior, and tunes $\lambda$.
+# [Step by step](by_hand.py) runs each of these by hand on the model of this page, so that we can replace any of them with our own code.
 
 # %% [markdown]
 # [^kristiadi2020]: Kristiadi, A., Hein, M., & Hennig, P. (2020). Being Bayesian, even just a bit, fixes overconfidence in ReLU networks. *ICML*. <https://arxiv.org/abs/2002.10118>

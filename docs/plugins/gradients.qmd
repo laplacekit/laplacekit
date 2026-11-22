@@ -2,29 +2,27 @@
 title: Differentiability
 ---
 
-A Laplace approximation is a function of the parameters it is fitted at. Its
-curvature, its log marginal likelihood and its predictive all depend on
-$\theta$, and some uses need that gradient. Marginal-likelihood training of
-the network (Immer et al., 2021)[^immer2021] differentiates the log marginal
-likelihood with respect to $\theta$. So **laplacekit** keeps two modes apart.
+A Laplace approximation is a function of the parameters $\theta$ it is fitted at.
+Its curvature, its log marginal likelihood and its predictive all depend on $\theta$, and some uses need their gradients.
+For example, marginal-likelihood training of the network (Immer et al., 2021)[^immer2021] differentiates the log marginal likelihood with respect to $\theta$.
+So **laplacekit** keeps two modes apart.
 
 ## The front door detaches
 
-`lk.laplace` fits for the user, who wants numbers. It detaches the chosen
-parameters, runs the fit loop under `torch.no_grad`, detaches the result,
-and gives the posterior its own copy of the mean. Nothing it returns is attached
-to the user's autograd graph, and training the module afterwards doesn't move
-the posterior.
+`lk.laplace` fits for the user, who wants numbers.
+It detaches the chosen parameters, runs the fit loop under `torch.no_grad`, detaches the result, and gives the posterior its own copy of the mean.
+Nothing it returns is attached to the user's autograd graph, and training the module afterwards doesn't move the posterior.
 
 ## By hand, the curvature stays differentiable
 
-The steps that `lk.laplace` composes don't detach the params. The curvature
-part of the statistic, the operator, the posterior and its mean keep their
-graph to `params`, and so do the log-determinant and prior terms of
-`neg_log_marglik`. The one exception is the data-fit term. The fold computes
-the log-likelihood under `no_grad`, so `stat.data_fit` is a value. For the
-gradient of the whole objective, we add the log-likelihood back from a forward
-of our own, which leaves the objective's value as it is:
+The steps that `lk.laplace` composes don't detach the params.
+The curvature part of the statistic, the operator, the posterior and its mean keep their graph to `params`.
+So do the log-determinant and prior terms of `neg_log_marglik`.
+
+The one exception is the data-fit term.
+The fold computes the log-likelihood under `no_grad`, so `stat.data_fit` is a plain value.
+To get the gradient of the whole objective, we add the log-likelihood back from a forward pass of our own.
+This leaves the objective's value unchanged:
 
 ```python
 params = lk.subsets.last_layer(fn, caps)
@@ -38,27 +36,23 @@ loss = lk.objectives.neg_log_marglik(post) + stat.data_fit - log_lik
 grads = torch.autograd.grad(loss, list(params.values()))
 ```
 
-Without the last two terms, `grads` would miss the gradient of the
-log-likelihood. [Step by step](../examples/by_hand.py#gradients) runs this on
-a real model.
+Without the last two terms of `loss`, `grads` would miss the gradient of the log-likelihood.
+[Step by step](../examples/by_hand.py#gradients) runs this on a real model.
 
 ## What a plugin must do
 
-A plugin's code runs in both modes, so it must not choose for the user. In
-`update`, `finalize`, a prior's `log_prob`, a predictive or an objective:
+A plugin's code runs in both modes, so it must not choose for the user.
+In `update`, `finalize`, a prior's `log_prob`, a predictive or an objective, use
 
-- no `.detach()`, `torch.no_grad()` or `.item()` on anything that depends on
-  the params or on a hyperparameter;
+- no `.detach()`, `torch.no_grad()` or `.item()` on anything that depends on the params or on a hyperparameter;
 - no round trip through NumPy or Python floats in the math.
 
-The front door's `no_grad` turns all of it into plain tensor arithmetic
-anyway, so this costs nothing there. Tensors that never depend on the params
-(sign vectors, masks, counts) are fine as they are.
+This costs nothing in the front door, since its `no_grad` turns all of it into plain tensor arithmetic anyway.
+Tensors that never depend on the params (sign vectors, masks, counts) are fine as they are.
 
-Objectives have one more rule. `lk.Minimize` minimizes them over the logs of
-the hyperparameters with L-BFGS, so they must be differentiable in them.
-`lk.testing.check_objective` checks that a finite gradient reaches every
-hyperparameter of the posterior, and the [Tuning objectives](objective.py) guide shows one whose
-gradient flows through `lk.predict`.
+Objectives have one more rule.
+`lk.Minimize` minimizes them over the logs of the hyperparameters with L-BFGS, so they must be differentiable in those hyperparameters.
+`lk.testing.check_objective` checks that a finite gradient reaches every hyperparameter of the posterior.
+The [Tuning objectives](objective.py) guide shows an objective whose gradient flows through `lk.predict`.
 
 [^immer2021]: Immer, A., Bauer, M., Fortuin, V., Rätsch, G., & Khan, M. E. (2021). Scalable marginal likelihood estimation for model selection in deep learning. *ICML*. <https://arxiv.org/abs/2104.04975>

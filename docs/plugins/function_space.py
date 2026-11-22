@@ -6,15 +6,13 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a protocol. Subclass it, as in
-# `class MyClass(lk.function_space.FunctionSpaceMethod):`, and your editor marks
-# a missing method in red.
+# The contract below is a protocol.
+# Subclass it, as in `class MyClass(lk.function_space.FunctionSpaceMethod):`, and your editor marks a missing method in red.
 # [Protocols in one page](protocols.py) shows how.
 # :::
 #
-# A function-space approximation turns the data into a Gaussian process over
-# the network's outputs. `fs.laplace` runs it, with the same probe, parameter
-# subset, passes and generators as `lk.laplace`:
+# A function-space approximation turns the data into a Gaussian process over the network's outputs.
+# `fs.laplace` runs it with the same probe, parameter subset, passes and generators as `lk.laplace`:
 #
 # ```python
 # class FunctionSpaceMethod[B](Protocol):
@@ -24,10 +22,11 @@
 #     def plan(self, params: Params, ctx: FitContext, prior: PriorWithCovariance, /) -> Pass[B]: ...
 # ```
 #
-# `B` is the posterior it returns. Unlike a weight-space `Staged`, `plan` also gets
-# the prior, because the GP's kernel contains the prior covariance. We write
-# the deterministic training conditional (DTC)[^dtc]: a GP that sees the data
-# only through its outputs at $m$ fixed inputs $Z$, in one pass.
+# `B` is the posterior it returns.
+# Unlike a weight-space `Staged`, `plan` also gets the prior, because the GP's kernel contains the prior covariance.
+#
+# As an example, we write the deterministic training conditional (DTC)[^dtc].
+# It is a GP that sees the data only through its outputs at $m$ fixed inputs $Z$, and it needs only one pass.
 
 # %%
 import matplotlib.pyplot as plt
@@ -203,10 +202,9 @@ class Inducing:
 
 
 # %% [markdown]
-# We try it on the sine of the [regression page](../quickstart/regression.py),
-# with 10 inducing inputs spread over the data, $[0, 8]$. As a reference, we fit
-# the full dense GGN over the same 151 weights, which is the exact GP of the
-# linearized network.
+# We try it on the sine of the [regression page](../quickstart/regression.py), with 10 inducing inputs spread over the data, $[0, 8]$.
+# As a reference, we fit the full dense GGN over the same 151 weights.
+# This is the exact GP of the linearized network.
 
 # %%
 torch.set_default_dtype(torch.float64)
@@ -274,79 +272,63 @@ ax.legend(loc="upper center", ncols=3, fontsize="small")
 plt.show()
 
 # %% [markdown]
-# With 10 inducing inputs, DTC is close to the full posterior: its standard
-# deviations at $x = -2$, 4 and 10 are 1.671, 0.308 and 0.569, against 1.684,
-# 0.308 and 0.57. In the plot, its band lies on the dashed lines of the full
-# GGN.
+# With 10 inducing inputs, DTC is close to the full posterior.
+# Its standard deviations at $x = -2$, 4 and 10 are 1.671, 0.308 and 0.569, against 1.684, 0.308 and 0.57.
+# In the plot, its band lies on the dashed lines of the full GGN.
 #
 # ## The contract
 #
-# `fs.laplace` probes the model, picks the parameters, and calls
-# `plan(params, ctx, prior)` with the prior bound. `plan` returns a `Pass`,
-# built with `lk.core.chain(pass, then=...)` as for a weight-space `Staged` (see
-# [Curvatures](curvature.py)). The core runs the pass over the data and hands
-# what `finalize` returns to `then`, which returns the next `Pass` or
-# `lk.core.Done(posterior)`. Our method has one pass. `plan` computes what depends on
-# $Z$ alone before any data, and `Cross` sums over the data.
+# `fs.laplace` probes the model, picks the parameters, and calls `plan(params, ctx, prior)` with the prior bound.
+# `plan` returns a `Pass`, built with `lk.core.chain(pass, then=...)` as for a weight-space `Staged` (see [Curvatures](curvature.py)).
+# The core runs the pass over the data and hands what `finalize` returns to `then`, which returns the next `Pass` or `lk.core.Done(posterior)`.
+# Our method has one pass.
+# `plan` computes what depends on $Z$ alone before any data, and `Cross` does the sum over the data.
 #
-# The pass follows the curvature conventions. Its statistic is a monoid
-# (`init` is zero and `+` adds), and `finalize` returns the per-example
-# average with the total weight, which the posterior multiplies back. `requires`
-# names what the pass needs, and `fs.laplace` checks it against the probe
-# before it reads the data. With `weights=False`, weighted batches are
-# refused, since our sum has no place for the weights.
+# The pass follows the curvature conventions.
+# Its statistic is a monoid (`init` is zero and `+` adds).
+# `finalize` returns the per-example average together with the total weight, which the posterior multiplies back.
+# `requires` names what the pass needs, and `fs.laplace` checks it against the probe before it reads the data.
+# With `weights=False`, weighted batches are refused, since our sum has no place for the weights.
 #
-# The posterior needs `model`, `likelihood`, `requires` and `at(inputs)`, which
-# returns an `lk.core.OutputGaussian` with one $[E, E]$ block per input
-# (`lk.core.PerInputCov`). `lk.predict` and `lk.predict_outputs` then take it like a
-# weight-space posterior. It must also be a dataclass with a `likelihood`
-# field. For a `lk.Gaussian` with one $\sigma$, the passes see unit noise, and
-# `fs.laplace` swaps the real likelihood in with `copy.replace` at the end.
-# `at` reads $\sigma$ through `curvature_scale` on every call, so a new
-# $\sigma$ needs no refit.
+# The posterior needs `model`, `likelihood`, `requires` and `at(inputs)`, which returns an `lk.core.OutputGaussian` with one $[E, E]$ block per input (`lk.core.PerInputCov`).
+# `lk.predict` and `lk.predict_outputs` then take it like a weight-space posterior.
+# It must also be a dataclass with a `likelihood` field.
+# For an `lk.Gaussian` with one $\sigma$, the passes see unit noise, and `fs.laplace` swaps the real likelihood in with `copy.replace` at the end.
+# `at` reads $\sigma$ through `curvature_scale` on every call, so a new $\sigma$ needs no refit.
 #
 # `laplacekit.function_space` has four helpers for such methods.
-# `fs.jacobian(model, params, inputs, dtype)` gives the $[N E, P]$ Jacobian of
-# the outputs, and `fs.cov_rows(prior, params, rows)` applies the prior
-# covariance $\Sigma_0$ to each row of a $[k, P]$ matrix; we use both.
-# `fs.rows_of(inputs, index)` picks examples out of a batch of inputs, which
-# may be a dict or another pytree, and `fs.is_shared(leaf)` says whether an
-# inputs leaf is shared by all examples instead of having one row each.
+# We use two of them.
+# `fs.jacobian(model, params, inputs, dtype)` gives the $[N E, P]$ Jacobian of the outputs.
+# `fs.cov_rows(prior, params, rows)` applies the prior covariance $\Sigma_0$ to each row of a $[k, P]$ matrix.
+# The other two handle inputs: `fs.rows_of(inputs, index)` picks examples out of a batch of inputs, which may be a dict or another pytree, and `fs.is_shared(leaf)` says whether an inputs leaf is shared by all examples instead of having one row each.
 #
-# A real method also needs a guard against a model that changed after the
-# fit. `fs.SubsetGP` and the posteriors of `laplacekit_gp` record the version
-# counters of the module's fixed parameters and raise in `at` when one
-# changed. We left that out.
+# A real method also needs a guard against a model that changed after the fit.
+# `fs.SubsetGP` and the posteriors of `laplacekit_gp` record the version counters of the module's fixed parameters and raise in `at` when one changed.
+# We left that out.
 #
 # ## The math
 #
-# The linearized network is a GP with the kernel $k(x, x') = J(x) \Sigma_0
-# J(x')^\top$. DTC conditions on the outputs $u = f(Z)$ and lets the outputs
-# at the data depend on them through $f(x) \approx K_{xZ} K_{ZZ}^{-1} u$. With
-# $H_n$ the output Hessian of the negative log-likelihood at $x_n$, the
-# covariance of the outputs at $x$ is
+# The linearized network is a GP with the kernel $k(x, x') = J(x) \Sigma_0 J(x')^\top$.
+# DTC conditions on the outputs $u = f(Z)$ and lets the outputs at the data depend on them through $f(x) \approx K_{xZ} K_{ZZ}^{-1} u$.
+# With $H_n$ the output Hessian of the negative log-likelihood at $x_n$, the covariance of the outputs at $x$ is
 #
 # $$
 #   \Sigma(x) = K_{xx} - K_{xZ} K_{ZZ}^{-1} K_{Zx} + K_{xZ} \Big( K_{ZZ} + \sum_{n=1}^N K_{Zn} H_n K_{nZ} \Big)^{-1} K_{Zx} .
 # $$
 #
-# The sum is the only term over the data, so one pass computes it. For a
-# Gaussian, $H_n = I / \sigma^2$: the pass sums with $\sigma = 1$, and `at`
-# divides by $\sigma^2$. `at` whitens with the Cholesky factor of $K_{ZZ}$
-# before it subtracts the two terms, which keeps the difference accurate when
-# $K_{ZZ}$ is close to singular. With every training input in $Z$, DTC is the
-# exact GP, which is the linearized Laplace posterior with the full GGN.
+# The sum is the only term over the data, so one pass computes it.
+# For a Gaussian, $H_n = I / \sigma^2$, so the pass sums with $\sigma = 1$, and `at` divides by $\sigma^2$.
+# `at` whitens with the Cholesky factor of $K_{ZZ}$ before it subtracts the two terms, which keeps the difference accurate when $K_{ZZ}$ is close to singular.
+# With every training input in $Z$, DTC is the exact GP, which is the linearized Laplace posterior with the full GGN.
 #
 # ## The test
 #
-# `lk.testing` has no check for function-space approximations yet, so we
-# test the laws by hand. The statistic must be the same for one batch or two
-# (the monoid law). With $Z$ set to the training inputs, `at` must give the
-# predictive of the dense GGN, an independent reference. We keep only 5
-# training points there: with more of them close together, $K_{ZZ}$ is so
-# ill-conditioned that the two sides agree to a few digits only.
-# `lk.testing.check_predictive` then checks that `lk.Linearized` accepts the
-# posterior.
+# `lk.testing` has no check for function-space approximations yet, so we test the laws by hand.
+# The statistic must be the same for one batch or two (the monoid law).
+# With $Z$ set to the training inputs, `at` must give the predictive of the dense GGN, an independent reference.
+# We keep only 5 training points there.
+# With more of them close together, $K_{ZZ}$ is so ill-conditioned that the two sides agree to only a few digits.
+# `lk.testing.check_predictive` then checks that `lk.Linearized` accepts the posterior.
 
 
 # %%
@@ -387,10 +369,8 @@ def test_inducing():
 test_inducing()
 
 # %% [markdown]
-# [`laplacekit_gp`](https://github.com/laplacekit/laplacekit/tree/main/plugins/gp)
-# is the full example, with three methods ([GP methods](../quickstart/gp.py)).
-# `lk.gp.ELLA` takes two passes: one picks the points and one sums the GGN
-# projected onto their basis. It checks its memory budgets before the data where
-# it can.
+# For a full example, see [`laplacekit_gp`](https://github.com/laplacekit/laplacekit/tree/main/plugins/gp), which has three methods ([GP methods](../quickstart/gp.py)).
+# One of them, `lk.gp.ELLA`, takes two passes: one picks the points and one sums the GGN projected onto their basis.
+# Where it can, it checks its memory budgets before reading the data.
 #
 # [^dtc]: Quiñonero-Candela, J., & Rasmussen, C. E. (2005). A unifying view of sparse approximate Gaussian process regression. *JMLR*, 6, 1939–1959. <https://jmlr.org/papers/v6/quinonero-candela05a.html>

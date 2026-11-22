@@ -4,14 +4,11 @@
 # jupyter: python3
 # ---
 #
-# We take a pretrained DDPM on MNIST, fit a Laplace approximation to the last
-# layer of its UNet, and carry a variance for every pixel through the sampling
-# loop.
+# We take a pretrained DDPM on MNIST, fit a Laplace approximation to the last layer of its UNet, and carry a variance for every pixel through the sampling loop.
 #
 # ::: {.callout-note title="Plugin"}
-# This page uses the
-# [`laplacekit-diffusers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/diffusers)
-# plugin. Install it with
+# This page uses the [`laplacekit-diffusers`](https://github.com/laplacekit/laplacekit/tree/main/plugins/diffusers) plugin.
+# Install it with:
 #
 # ```bash
 # pip install "laplacekit[diffusers]" torchvision
@@ -51,9 +48,9 @@ scheduler = DDPMScheduler.from_pretrained(REPO, revision=REVISION)
 mnist = MNIST(Path.home() / ".cache" / "laplacekit" / "mnist", download=True)
 
 # %% [markdown]
-# The data are clean images, scaled to $[-1, 1]$. `lk.diffusers.laplace` adds
-# the noise itself, as in training. We fit on 1,000 images and tell it that the
-# training set has 60,000.
+# The data are clean images, scaled to $[-1, 1]$.
+# `lk.diffusers.laplace` adds the noise itself, as in training.
+# We fit on 1,000 images and tell it that the training set has 60,000.
 
 # %%
 images = mnist.data[:1000].unsqueeze(1).float() / 127.5 - 1.0
@@ -63,9 +60,8 @@ post = lk.diffusers.laplace(unet, scheduler, loader, n_data=60_000)
 print(post)
 
 # %% [markdown]
-# We sample with 50 deterministic DDIM steps. At each step, `lk.predict_outputs` gives
-# the predicted noise and its per-pixel variance, and we push the variance
-# through the step.
+# We sample with 50 deterministic DDIM steps.
+# At each step, `lk.predict_outputs` gives the predicted noise and its per-pixel variance, and we push the variance through the step.
 
 # %%
 alpha_bar = scheduler.alphas_cumprod
@@ -110,31 +106,31 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# The top row shows the samples and the bottom row their variance maps, each
-# on its own color scale. The maps look like speckle. Most of the variance
-# comes from the first steps, where many pixels of $\hat x_0$ are clipped, and
-# the full tutorial explains why.
+# The top row shows the samples and the bottom row their variance maps, each on its own color scale.
+# The maps look like speckle.
+# Most of the variance comes from the first steps, where many pixels of $\hat x_0$ are clipped.
+# The full tutorial explains why.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# The UNet $\epsilon_\theta(x_t, t)$ predicts the noise in $x_t$. Linearized
-# around the fitted weights, the Laplace posterior makes the predicted noise
-# Gaussian, $\mathcal{N}(\epsilon_{\theta_*}(x_t, t), J \Sigma J^\top)$, and we
-# keep the diagonal of its covariance. One DDIM step from $t$ to $t'$ is
+# The UNet $\epsilon_\theta(x_t, t)$ predicts the noise in $x_t$.
+# Linearized around the fitted weights, the Laplace posterior makes the predicted noise Gaussian, $\mathcal{N}(\epsilon_{\theta_*}(x_t, t), J \Sigma J^\top)$.
+# We keep the diagonal of its covariance.
+# One DDIM step from $t$ to $t'$ is
 #
 # $$
 #   \hat x_0 = \frac{x_t - \sqrt{1 - \bar\alpha_t} \, \hat\epsilon}{\sqrt{\bar\alpha_t}} , \qquad
 #   x_{t'} = \sqrt{\bar\alpha_{t'}} \, \mathrm{clip}(\hat x_0) + \sqrt{1 - \bar\alpha_{t'}} \, \hat\epsilon .
 # $$
 #
-# Let $m$ be $1$ where $\hat x_0$ lies in $[-1, 1]$ and $0$ where it is
-# clipped. Linearizing the step pixel by pixel,
+# Let $m$ be $1$ where $\hat x_0$ lies in $[-1, 1]$ and $0$ where it is clipped.
+# Linearizing the step pixel by pixel,
 #
 # $$
 #   \mathrm{Var}(x_{t'}) \approx \Big(m \sqrt{\tfrac{\bar\alpha_{t'}}{\bar\alpha_t}}\Big)^2 \mathrm{Var}(x_t) + \Big(\sqrt{1 - \bar\alpha_{t'}} - m \sqrt{\tfrac{\bar\alpha_{t'}}{\bar\alpha_t}} \sqrt{1 - \bar\alpha_t}\Big)^2 \mathrm{Var}(\hat\epsilon) ,
 # $$
 #
-# which drops the covariance between $x_t$ and $\hat\epsilon$. This is the
-# idea of BayesDiff ([Kou et al., 2024](https://arxiv.org/abs/2310.11142)).
+# which drops the covariance between $x_t$ and $\hat\epsilon$.
+# This is the idea of BayesDiff ([Kou et al., 2024](https://arxiv.org/abs/2310.11142)).
 # :::
 #
 # The full tutorial: [Diffusion models](../examples/diffusion.py)

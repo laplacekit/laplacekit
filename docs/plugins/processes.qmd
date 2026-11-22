@@ -2,35 +2,31 @@
 title: Several processes
 ---
 
-When the data doesn't fit through one process in reasonable time, we split it
-across the ranks of a `torch.distributed` process group. Each rank folds its
-own shard, and the statistics are added. Since statistics are
-[monoids](statistics.qmd), the sum is the statistic one process would have
-computed over all the data.
+When one process can't get through the data in reasonable time, we split it across the ranks of a `torch.distributed` process group.
+Each rank folds its own shard, and the statistics are added.
+Since statistics are [monoids](statistics.qmd), the sum is the statistic one process would have computed over all the data.
 
 ## With the front door
 
 Each rank calls `lk.laplace` with its own shard, and nothing else changes:
 
 ```python
-torch.distributed.init_process_group("gloo")  # e.g. under torchrun
+torch.distributed.init_process_group("gloo")  # e.g., under torchrun
 
 # my_shard: this rank's batches, as (inputs, targets) pairs or `lk.Batch` objects
 data = lk.data.from_loader(my_shard, n_data=n_total)
 post = lk.laplace(model, data, likelihood=lk.Categorical())
 ```
 
-After each pass, `lk.laplace` combines the statistic with
-`lk.distributed.all_reduce`. Every rank then holds the same statistic and builds the
-same posterior. Pass `n_data` as the example count over all ranks, not the
-shard's, since it becomes the posterior's `n_data`. Every rank needs at least
-one batch: a rank with none raises, and the others then wait in the
-collective.
+After each pass, `lk.laplace` combines the statistic with `lk.distributed.all_reduce`.
+Every rank then holds the same statistic and builds the same posterior.
+Pass `n_data` as the example count over all ranks, not the shard's, since it becomes the posterior's `n_data`.
+Every rank needs at least one batch: a rank with none raises, and the others then wait in the collective.
 
 ## By hand
 
-`all_reduce(stat)` goes between the last `update` and `finalize`. With `data`
-from above, a pass hands out `lk.Batch` objects:
+`all_reduce(stat)` goes between the last `update` and `finalize`.
+With `data` from above, a pass hands out `lk.Batch` objects:
 
 ```python
 stat = fit.init()
@@ -42,27 +38,20 @@ stat = lk.distributed.all_reduce(stat)
 curv = fit.finalize(stat)
 ```
 
-Each rank gathers every rank's statistic and folds them with `+` in rank
-order. The rank's own statistic keeps its autograd graph, and the others
-arrive detached, on the devices of the matching local tensors. Without a
-process group, `all_reduce` returns the statistic as it is, so the same code
-runs on one process.
+Each rank gathers every rank's statistic and folds them with `+` in rank order.
+The rank's own statistic keeps its autograd graph, and the others arrive detached, on the devices of the matching local tensors.
+Without a process group, `all_reduce` returns the statistic as it is, so the same code runs on one process.
 
 ## What a plugin must do
 
-A plugin needs nothing new here. `all_reduce` needs a statistic that is a
-pytree, so that its tensors can be moved to the CPU and back, and that
-combines with `+`. It travels with `pickle`, so its class must be importable
-(see [Immutability and pytrees](pytrees.qmd)). It doesn't need a sum: a
-statistic with `Requirements(additive_stat=False)` works too.
-`lk.testing.check_curvature` checks the monoid law, which is what makes the
-sum over ranks correct.
+A plugin needs nothing new here.
+`all_reduce` needs a statistic that is a pytree, so that its tensors can be moved to the CPU and back, and that combines with `+`.
+It travels with `pickle`, so its class must be importable (see [Immutability and pytrees](pytrees.qmd)).
+The statistic doesn't have to be a sum: one with `Requirements(additive_stat=False)` works too.
+`lk.testing.check_curvature` checks the monoid law, which is what makes the sum over ranks correct.
 
 ::: {.callout-note}
-Each batch's generator comes from the fit's seed, the rank's own count of
-examples before the batch, and the rank itself, so ranks with equal shards
-draw differently. A method that draws random numbers, such as a sampled
-Fisher, therefore draws differently on two ranks than on one process over the
-same data. Both are estimates of the same quantity,
-but their numbers won't match exactly.
+Each batch's generator comes from the fit's seed, the rank's own count of examples before the batch, and the rank itself, so ranks with equal shards draw differently.
+A method that draws random numbers, such as a sampled Fisher, therefore draws differently on two ranks than on one process over the same data.
+Both are estimates of the same quantity, but their numbers won't match exactly.
 :::

@@ -4,8 +4,8 @@
 # jupyter: python3
 # ---
 #
-# We want error bars for a small regression network. The data are noisy
-# samples of a sine on $[0, 8]$, and we predict on $[-2, 10]$, past both ends.
+# We want error bars for a small regression network.
+# The data are noisy samples of a sine on $[0, 8]$, and we predict on $[-2, 10]$, past both ends.
 
 # %%
 import matplotlib.pyplot as plt
@@ -30,8 +30,7 @@ for _ in range(1000):
     opt.step()
 
 # %% [markdown]
-# `lk.Gaussian()` tunes the noise $\sigma$ together with the prior, so we don't
-# need to know it.
+# `lk.Gaussian()` tunes the noise $\sigma$ together with the prior, so we don't need to know it in advance.
 
 # %%
 post = lk.laplace(
@@ -58,15 +57,14 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# The tuned $\sigma$ is close to the $0.3$ we used to make the data. The band
-# is about $\pm 2 \sigma$ on the data and widens past both ends, most on the
-# left.
+# The tuned $\sigma$ is close to the $0.3$ we used to make the data.
+# The band is about $\pm 2 \sigma$ on the data and widens past both ends, especially on the left.
 #
 # ## Noise per output
 #
-# A network with several outputs can have a different noise level on each. Our
-# second toy predicts a sine and a cosine, with noise 0.1 on the first and 0.5
-# on the second. We train with the squared error weighted by those levels.
+# A network with several outputs can have a different noise level on each.
+# Our second toy predicts a sine and a cosine, with noise 0.1 on the first and 0.5 on the second.
+# We train with the squared error weighted by those levels.
 
 # %%
 sigma = torch.tensor([0.1, 0.5])
@@ -101,34 +99,27 @@ print(
 print("predictive std at x = 10:", [round(v, 3) for v in std2[-1].tolist()])
 
 # %% [markdown]
-# Averaged over the data range, the predictive standard deviations are 0.103
-# and 0.511, close to the two noise levels. At x = 10 they have grown to 0.15
-# and 0.567.
+# Averaged over the data range, the predictive standard deviations are 0.103 and 0.511, close to the two noise levels.
+# At $x = 10$, they have grown to 0.15 and 0.567.
 #
-# A $\sigma$ with several entries is fixed at fit time. The curvature weights
-# each output by its own inverse noise variance, so another $\sigma$ would
-# need a new fit. A single learned $\sigma$ (`lk.Gaussian()`) only scales the
-# whole data term, which is why the hyper tuner can change it without one. Here
-# the tuner fits the prior alone and leaves this $\sigma$ as given.
+# A $\sigma$ with several entries is fixed at fit time.
+# The curvature weights each output by its own inverse noise variance, so another $\sigma$ would need a new fit.
+# A single learned $\sigma$ (`lk.Gaussian()`) only scales the whole data term, which is why the hyper tuner can change it without a refit.
+# Here, the tuner fits the prior alone and leaves this $\sigma$ as given.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# The likelihood is $p(y \mid f) = \mathcal{N}(y \mid f, \sigma^2)$. With the
-# Laplace posterior $\mathcal{N}(\theta_*, \Sigma)$ on the last layer and the
-# network linearized around $\theta_*$, the predictive is Gaussian with no
-# further approximation,
+# The likelihood is $p(y \mid f) = \mathcal{N}(y \mid f, \sigma^2)$.
+# With the Laplace posterior $\mathcal{N}(\theta_*, \Sigma)$ on the last layer and the network linearized around $\theta_*$, the predictive is Gaussian with no further approximation,
 #
 # $$
 #   p(y \mid x, \mathcal{D}) \approx \mathcal{N}\big(y \mid f_{\theta_*}(x), \; J(x) \Sigma J(x)^\top + \sigma^2\big) ,
 # $$
 #
 # where $J(x)$ is the Jacobian of the output with respect to the last layer.
-# The prior precision and $\sigma$ are picked together by maximizing the
-# marginal likelihood, without a refit.
+# The prior precision and $\sigma$ are picked together by maximizing the marginal likelihood, without a refit.
 #
-# With one $\sigma_k$ per output, the GGN is $J^\top \mathrm{diag}(\sigma^{-2}) J$,
-# summed over the data, and the noise term of the predictive is
-# $\mathrm{diag}(\sigma^2)$. A single $\sigma$ factors out of the GGN as
-# $\sigma^{-2} J^\top J$; a vector doesn't.
+# With one $\sigma_k$ per output, the GGN is $J^\top \mathrm{diag}(\sigma^{-2}) J$, summed over the data, and the noise term of the predictive is $\mathrm{diag}(\sigma^2)$.
+# A single $\sigma$ factors out of the GGN as $\sigma^{-2} J^\top J$, but a vector doesn't.
 # :::
 #
 # The full tutorial: [Regression](../examples/regression.py)

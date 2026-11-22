@@ -6,13 +6,13 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a protocol. Subclass it, as in
-# `class MyClass(lk.core.Likelihood):`, and your editor marks a missing method in red.
+# The contract below is a protocol.
+# Subclass it, as in `class MyClass(lk.core.Likelihood):`, and your editor marks a missing method in red.
 # [Protocols in one page](protocols.py) shows how.
 # :::
 #
-# A likelihood needs one method, `log_prob(f, y)`, which returns $\log p(y \mid
-# f)$ per example, shaped `[N]`. Each optional hook unlocks more methods:
+# A likelihood needs one method, `log_prob(f, y)`, which returns $\log p(y \mid f)$ per example, shaped `[N]`.
+# Each optional hook unlocks more methods:
 #
 # ```python
 # class Likelihood(Protocol):
@@ -51,11 +51,10 @@
 #     def average(self, f: Tensor, /) -> Distribution: ...
 # ```
 #
-# Our example is the Bradley–Terry model for pairwise preferences, as in reward
-# models. **laplacekit** ships it in `lk.reward`, which the [Reward
-# models](../quickstart/reward.py) page uses. Here we build it from scratch: we
-# start from nothing but its log-likelihood, see what the core can and can't do
-# with it, and then add the hooks that unlock the rest.
+# Our example is the Bradley–Terry model for pairwise preferences, as in reward models.
+# **laplacekit** ships it in `lk.reward`, which the [Reward models](../quickstart/reward.py) page uses.
+# Here we build it from scratch.
+# We start from nothing but its log-likelihood, see what the core can and can't do with it, and then add the hooks that unlock the rest.
 
 # %%
 import math
@@ -71,13 +70,12 @@ import laplacekit as lk
 # %% [markdown]
 # ## Data and model
 #
-# A network $g_\theta$ gives each item $x$ a score. An example is a pair of
-# items $(a, b)$ with a label $y = 1$ if $a$ is preferred over $b$ and $y = 0$
-# otherwise. The items are points $x \in [-2, 2]$ with a hidden utility $u(x) =
-# \sin(2x)$. We draw 400 random pairs and label each with $y \sim
-# \mathrm{Bernoulli}(\sigma(3 (u(a) - u(b))))$. The inputs are shaped `[N, 2,
-# 1]`: two items of one feature each. The scorer is a small ReLU MLP applied to
-# each item, so the model outputs `[N, 2]`, the two scores.
+# A network $g_\theta$ gives each item $x$ a score.
+# An example is a pair of items $(a, b)$ with a label $y = 1$ if $a$ is preferred over $b$ and $y = 0$ otherwise.
+# The items are points $x \in [-2, 2]$ with a hidden utility $u(x) = \sin(2x)$.
+# We draw 400 random pairs and label each with $y \sim \mathrm{Bernoulli}(\sigma(3 (u(a) - u(b))))$.
+# The inputs are shaped `[N, 2, 1]`: two items of one feature each.
+# The scorer is a small ReLU MLP applied to each item, so the model outputs `[N, 2]`, the two scores.
 
 # %%
 torch.set_default_dtype(torch.float64)
@@ -111,10 +109,9 @@ print("final loss:", round(loss.item(), 3))
 # %% [markdown]
 # ## Only the log-likelihood
 #
-# `lk.likelihoods.from_log_prob` turns a plain function into a likelihood. Ours
-# is per pair, so it fits the contract: each example's log-likelihood depends on
-# its own outputs only. The network is small, so we put the Laplace
-# approximation on all its 1,153 parameters (`subset=lk.subsets.all`).
+# `lk.likelihoods.from_log_prob` turns a plain function into a likelihood.
+# Ours is per pair, so it fits the contract: each example's log-likelihood depends on its own outputs only.
+# The network is small, so we put the Laplace approximation on all its 1,153 parameters (`subset=lk.subsets.all`).
 
 
 # %%
@@ -135,39 +132,35 @@ post = lk.laplace(
 print(post)
 
 # %% [markdown]
-# Writing $f = (g_\theta(a), g_\theta(b))$ for the two scores, this is the
-# Bradley–Terry likelihood,
+# Writing $f = (g_\theta(a), g_\theta(b))$ for the two scores, this is the Bradley–Terry likelihood,
 #
 # $$
 #   p(y = 1 \mid f) = \sigma(f_1 - f_2) , \qquad \log p(y \mid f) = y \log \sigma(f_1 - f_2) + (1 - y) \log \sigma(f_2 - f_1) ,
 # $$
 #
-# where $\sigma$ is the logistic sigmoid. Note that adding a constant to every
-# score leaves the likelihood unchanged.
+# where $\sigma$ is the logistic sigmoid.
+# Note that adding the same constant to both scores leaves the likelihood unchanged.
 #
-# `lk.laplace` picked `DiagGGN(fisher="empirical")` for every layer. The reason is
-# that the GGN, $G = \frac{1}{N} \sum_i J_i^\top H_i J_i$, needs the output
-# Hessian $H_i$, either in closed form or as a Monte Carlo estimate from samples
-# $y \sim p(y \mid f_i)$. A bare `log_prob` gives neither a closed form nor
-# samples. It does give the observed Hessian, by autograd at the observed
-# labels, which we come back to at the end. By default, though, the core uses
-# the gradient at the observed label, that is, the empirical Fisher,
+# `lk.laplace` picked `DiagGGN(fisher="empirical")` for every layer.
+# This is because the GGN, $G = \frac{1}{N} \sum_i J_i^\top H_i J_i$, needs the output Hessian $H_i$, either in closed form or as a Monte Carlo estimate from samples $y \sim p(y \mid f_i)$.
+# A bare `log_prob` gives neither a closed form nor samples.
+# It does give the observed Hessian, by autograd at the observed labels, which we come back to at the end.
+# By default, though, the core uses the gradient at the observed label, that is, the empirical Fisher,
 #
 # $$
 #   F_\text{emp} = \frac{1}{N} \sum_{i=1}^N \mathrm{diag}(g_i g_i^\top) , \qquad g_i = \nabla_\theta \log p(y_i \mid f_\theta(x_i)) .
 # $$
 #
 # :::{.callout-note}
-# The empirical Fisher equals the Fisher only when the labels follow the model,
-# and it can be a poor curvature estimate otherwise (Kunstner et al., 2019)[^kunstner2019]. It
-# also needs the targets, so it can't fit on unlabelled data.
+# The empirical Fisher equals the Fisher only when the labels follow the model, and it can be a poor curvature estimate otherwise (Kunstner et al., 2019)[^kunstner2019].
+# It also needs the targets, so it can't fit on unlabeled data.
 # :::
 #
-# The prior precision was tuned by the marginal likelihood. It needs $\log p(y
-# \mid f)$ at the fitted parameters, which we have.
+# The prior precision was tuned by the marginal likelihood.
+# The marginal likelihood needs $\log p(y \mid f)$ at the fitted parameters, which we have.
 #
-# What doesn't work is a predictive over $y$. The predictives need a
-# distribution over targets, and we haven't given one:
+# What doesn't work is a predictive over $y$.
+# The predictives need a distribution over targets, and we haven't given one:
 
 # %%
 try:
@@ -176,21 +169,19 @@ except lk.CapabilityError as e:
     print(e)
 
 # %% [markdown]
-# The error points to `lk.predict_outputs`, which gives the Gaussian over the scores $f$
-# under the linearized model, $\mathcal{N}(f \mid m, V)$ with $m =
-# f_{\hat\theta}(x)$ and $V = J \Sigma J^\top$. It needs only the model and the
-# posterior. From there we can do the last step by hand. The score difference
-# $d = f_1 - f_2$ is Gaussian with mean $m_1 - m_2$ and variance $V_{11} + V_{22}
-# - 2 V_{12}$, and the probit approximation gives
+# The error points to `lk.predict_outputs`, which gives the Gaussian over the scores $f$ under the linearized model, $\mathcal{N}(f \mid m, V)$ with $m = f_{\hat\theta}(x)$ and $V = J \Sigma J^\top$.
+# It needs only the model and the posterior.
+# From there, we can do the last step by hand.
+# The score difference $d = f_1 - f_2$ is Gaussian with mean $m_1 - m_2$ and variance $V_{11} + V_{22} - 2 V_{12}$, and the probit approximation gives
 #
 # $$
 #   p(y = 1 \mid a, b, \mathcal{D}) \approx \sigma\left( \frac{m_1 - m_2}{\sqrt{1 + \frac{\pi}{8} (V_{11} + V_{22} - 2 V_{12})}} \right) .
 # $$
 #
-# Note that the shift direction drops out of $d$, so its large variance doesn't
-# matter. The variance is large because the likelihood doesn't change when we
-# add the same constant to both scores. The data then say nothing about that
-# direction, so its posterior variance is close to the prior's.
+# Note that the shift direction, where we add the same constant to both scores, drops out of $d$.
+# This matters because the likelihood doesn't change along that direction.
+# The data then say nothing about it, so its posterior variance stays close to the prior's, which is large.
+# Since $d$ ignores it, the large variance doesn't hurt the prediction.
 
 
 # %%
@@ -205,9 +196,8 @@ def win_prob(out):
 
 
 # %% [markdown]
-# We compare each item $x \in [-6, 6]$ with the reference item $b = 0$, and plot
-# the probability that $x$ is preferred. Outside $[-2, 2]$, there is no data, so
-# the true curve is drawn only inside.
+# We compare each item $x \in [-6, 6]$ with the reference item $b = 0$, and plot the probability that $x$ is preferred.
+# There is no data outside $[-2, 2]$, so we draw the true curve only inside.
 
 # %%
 t = torch.linspace(-6, 6, 300)
@@ -234,21 +224,19 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# Inside the data range, the two curves mostly agree. Outside, the MAP model
-# extrapolates its scores and goes to $0$ or $1$, while the Laplace predictive is
-# less sure. On the left, for instance, it levels off near $0.9$.
+# Inside the data range, the two curves mostly agree.
+# Outside, the MAP model extrapolates its scores and goes to $0$ or $1$, while the Laplace predictive is less sure.
+# On the left, for instance, it levels off near $0.9$.
 #
 # ## Adding a distribution
 #
-# The Bradley–Terry label is a Bernoulli variable with logit $f_1 - f_2$. We can
-# say so with a `distribution(f)` method (the `HasDistribution` hook). Then the
-# core can sample labels, so the GGN with a Monte Carlo output
-# Hessian, $H_i \approx \frac{1}{S} \sum_s \nabla_f \log p(y_s \mid f_i) \nabla_f
-# \log p(y_s \mid f_i)^\top$ with $y_s \sim p(y \mid f_i)$, becomes available.
-# And the predictives get a distribution to put on top of $f$.
+# The Bradley–Terry label is a Bernoulli variable with logit $f_1 - f_2$.
+# We can say so with a `distribution(f)` method (the `HasDistribution` hook).
+# Then the core can sample labels, which makes the GGN with a Monte Carlo output Hessian, $H_i \approx \frac{1}{S} \sum_s \nabla_f \log p(y_s \mid f_i) \nabla_f \log p(y_s \mid f_i)^\top$ with $y_s \sim p(y \mid f_i)$, available.
+# The predictives also get a distribution to put on top of $f$.
 #
-# The likelihood is now a small class instead of a function. `log_prob` can be
-# derived from the distribution with `lk.core.default_log_prob`.
+# The likelihood is now a small class instead of a function.
+# `log_prob` can be derived from the distribution with `lk.core.default_log_prob`.
 
 
 # %%
@@ -271,12 +259,12 @@ post_mc = lk.laplace(
 print(post_mc)
 
 # %% [markdown]
-# The default is now the dense GGN of every layer. The built-in links know
-# only the built-in likelihoods, so for the predictive we give `Linearized`
-# our own link: an object with `supports` and a call that turns the Gaussian
-# over $f$ into a distribution over $y$. Its body is `win_prob` from above. The
-# call also takes a `generator`, which a link that samples draws from; ours
-# draws nothing.
+# The default is now the dense GGN of every layer.
+# The built-in links know only the built-in likelihoods.
+# So for the predictive, we give `Linearized` our own link: an object with `supports` and a call that turns the Gaussian over $f$ into a distribution over $y$.
+# Its body is `win_prob` from above.
+# The call also takes a `generator`, which a sampling link draws from.
+# Ours draws nothing.
 
 
 # %%
@@ -302,19 +290,17 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# Far from the data, the GGN version is less confident still. Part of the
-# difference is the prior: the marginal likelihood picks a different $\lambda$
-# for each curvature, as the two printouts show. The jumps come from the ReLUs.
-# The Jacobian jumps whenever a unit switches on or off, since the ReLU's
-# derivative jumps from 0 to 1, so the variance jumps too.
+# Far from the data, the GGN version is less confident still.
+# Part of the difference comes from the prior: the marginal likelihood picks a different $\lambda$ for each curvature, as the two printouts show.
+# The jumps in the curves come from the ReLUs.
+# The ReLU's derivative jumps from 0 to 1, so the Jacobian, and with it the variance, jumps whenever a unit switches on or off.
 #
 # ## Adding a default link
 #
-# Passing `link=PairProbit()` on every call gets old. A `default_link` method
-# (the `HasDefaultLink` hook) names the link that `Linearized` uses when we
-# don't give one, so plain `lk.predict(post, x)` works. Its `n_samples` is `None`
-# when the output covariance is exact and the number of draws when it is
-# sampled. `PairProbit` only reads the per-input covariance, so it serves both.
+# Passing `link=PairProbit()` on every call gets old.
+# A `default_link` method (the `HasDefaultLink` hook) names the link that `Linearized` uses when we don't give one, so plain `lk.predict(post, x)` works.
+# Its `n_samples` is `"exact"` when the output covariance is exact, and the number of draws when it is sampled.
+# `PairProbit` only reads the per-input covariance, so it serves both.
 
 
 # %%
@@ -339,23 +325,21 @@ print(
 )
 
 # %% [markdown]
-# With the same seed, the Monte Carlo output Hessian draws the same labels, so the
-# fit is the same as before, and so are the probabilities.
+# With the same seed, the Monte Carlo output Hessian draws the same labels.
+# So the fit is the same as before, and so are the probabilities.
 #
 # ## Adding the output Hessian
 #
-# For Bradley–Terry, we know the output Hessian in closed form. With $p =
-# \sigma(f_1 - f_2)$ and $u = (1, -1)^\top$, the gradient of $-\log p(y \mid f)$
-# is $(p - y) \, u$, so
+# For Bradley–Terry, we know the output Hessian in closed form.
+# With $p = \sigma(f_1 - f_2)$ and $u = (1, -1)^\top$, the gradient of $-\log p(y \mid f)$ is $(p - y) \, u$, so
 #
 # $$
 #   H = p (1 - p) \, u u^\top = p (1 - p) \begin{pmatrix} 1 & -1 \\ -1 & 1 \end{pmatrix} .
 # $$
 #
-# An `output_hessian(f)` method (the `HasOutputHessian` hook) returns it as an
-# object with `mv`, `sqrt_mv`, `diagonal` and `dense`, all per example. For
-# `sqrt_mv`, we need some $A$ with $A A^\top = H$. Since $u^\top u = 2$, $A =
-# \sqrt{p (1 - p) / 2} \; u u^\top$ works.
+# An `output_hessian(f)` method (the `HasOutputHessian` hook) returns it as an object with `mv`, `sqrt_mv`, `diagonal` and `dense`, all per example.
+# For `sqrt_mv`, we need some $A$ with $A A^\top = H$.
+# Since $u^\top u = 2$, $A = \sqrt{p (1 - p) / 2} \; u u^\top$ works.
 
 # %%
 U = torch.tensor([1.0, -1.0])
@@ -395,12 +379,10 @@ post_exact = lk.laplace(
 )
 
 # %% [markdown]
-# The Monte Carlo estimate with one sample is $(p - y_s)^2 \, u u^\top$, which is
-# either $(1 - p)^2 u u^\top$ or $p^2 u u^\top$ instead of $p (1 - p) \, u u^\top$.
-# It is right on average, and the GGN averages it over the 400 pairs. To see how
-# much noise is left, we compare the GGN from the Monte Carlo Hessian with $S = 1$
-# and $S = 100$ samples (`lk.DenseGGN(fisher="mc", mc_samples=...)`) against the closed form,
-# by the relative error in the Frobenius norm over all blocks.
+# The Monte Carlo estimate with one sample is $(p - y_s)^2 \, u u^\top$, which is either $(1 - p)^2 u u^\top$ or $p^2 u u^\top$ instead of $p (1 - p) \, u u^\top$.
+# It is right on average, and the GGN averages it over the 400 pairs.
+# But how noisy is it?
+# To find out, we compare the GGN from the Monte Carlo Hessian with $S = 1$ and $S = 100$ samples (`lk.DenseGGN(fisher="mc", mc_samples=...)`) against the closed form, by the relative error in the Frobenius norm over all blocks.
 
 
 # %%
@@ -434,15 +416,14 @@ for s in [1, 100]:
     print(f"S = {s:3d}: relative error {rel_err(mc):.3f}")
 
 # %% [markdown]
-# The error is about 7% with one sample and shrinks with more, at $S$ times
-# the sampling cost. The closed form has no error and needs no samples.
+# The error is about 7% with one sample.
+# It shrinks with more samples, at $S$ times the sampling cost.
+# The closed form has no error and needs no samples.
 #
-# There is one more route, which needs no hook at all. `observed=True`
-# makes `Diag` and `DenseGGN` use the Hessian of $-\log p(y \mid f)$ at the
-# observed labels, computed by autograd from `log_prob`. In general, it differs
-# from the Fisher and can be indefinite. For the Bradley–Terry model, it is $p (1 -
-# p) \, u u^\top$ whatever $y$ is, so even our bare `from_log_prob` likelihood
-# gets the exact GGN this way:
+# There is one more route, and it needs no hook at all.
+# `observed=True` makes `Diag` and `DenseGGN` use the Hessian of $-\log p(y \mid f)$ at the observed labels, computed by autograd from `log_prob`.
+# In general, this Hessian differs from the Fisher and can be indefinite.
+# For the Bradley–Terry model, it is $p (1 - p) \, u u^\top$ whatever $y$ is, so even our bare `from_log_prob` likelihood gets the exact GGN this way:
 
 # %%
 observed = lk.laplace(
@@ -467,42 +448,33 @@ print(f"observed: relative error {rel_err(observed):.1e}")
 # | + `output_hessian` (`HasOutputHessian`) | the same, and `fisher="exact"` (the default) with the exact output Hessian | the same |
 # | is a built-in `Categorical` (`class_dim=-1`, no `mask_fn`), `Gaussian` or `Bernoulli` | also `KFAC`, which refuses every other likelihood | the same |
 #
-# Start with `from_log_prob` when the log-likelihood is all there is, for example
-# a contrastive or energy-based objective. Add `distribution` as soon as the
-# targets have a known distribution. It is usually one line, and it makes the
-# GGN-type curvatures and the predictives available. Add `output_hessian` when the Hessian has a closed
-# form and the outputs are small or structured, so the GGN is exact and cheap.
-# The likelihood's `sample` (`HasSample`) and `mask` (`HasMask`) hooks are
-# optional too: the first replaces sampling from the distribution, the second
-# drops output positions such as padding tokens. A bare log-likelihood gets the
-# mask from `from_log_prob(fn, mask_fn=...)`, where `mask_fn(f, inputs)` returns
-# False at the positions that don't count.
+# Start with `from_log_prob` when the log-likelihood is all there is, e.g., for a contrastive or energy-based objective.
+# Add `distribution` as soon as the targets have a known distribution.
+# It is usually one line, and it makes the GGN-type curvatures and the predictives available.
+# Add `output_hessian` when the Hessian has a closed form and the outputs are small or structured, so the GGN is exact and cheap.
+# The likelihood's `sample` (`HasSample`) and `mask` (`HasMask`) hooks are optional too.
+# The first replaces sampling from the distribution, and the second drops output positions such as padding tokens.
+# A bare log-likelihood gets the mask from `from_log_prob(fn, mask_fn=...)`, where `mask_fn(f, inputs)` returns False at the positions that don't count.
 #
-# Two more hooks catch mistakes early. `check_targets` (`HasTargetCheck`) runs
-# on each batch's targets before the fit uses them and raises on bad values,
-# such as a label outside $\{0, 1\}$ for ours. `check_outputs`
-# (`HasOutputCheck`) runs once on the probe's forward pass, before any data is
-# fitted, and raises `StructureError` on outputs the likelihood can't take, such
-# as scores that aren't shaped `[N, 2]`. The predictives that average output
-# draws, `WeightSamples` and the `MC` link, need `average` (`HasSampleAverage`),
-# which the [Predictives](predictive.py) guide adds to a likelihood of its own.
+# Two more hooks catch mistakes early.
+# `check_targets` (`HasTargetCheck`) runs on each batch's targets before the fit uses them and raises on bad values, such as a label outside $\{0, 1\}$ for ours.
+# `check_outputs` (`HasOutputCheck`) runs once on the probe's forward pass, before any data is fitted, and raises `StructureError` on outputs the likelihood can't take, such as scores that aren't shaped `[N, 2]`.
+# The predictives that average output draws, `WeightSamples` and the `MC` link, need `average` (`HasSampleAverage`).
+# The [Predictives](predictive.py) guide adds it to a likelihood of its own.
 #
 # :::{.callout-note}
-# The contract is per example. A loss that couples the examples of a batch, such
-# as a listwise ranking loss or InfoNCE with in-batch negatives, doesn't fit it,
-# since the curvature statistics are sums over examples.
+# The contract is per example.
+# A loss that couples the examples of a batch, such as a listwise ranking loss or InfoNCE with in-batch negatives, doesn't fit it, since the curvature statistics are sums over examples.
 # :::
 
 # %% [markdown]
 # ## The test
 #
-# `lk.testing.check_likelihood` checks the laws the core relies on, such as a
-# `log_prob` shaped `[N]` and a symmetric PSD output Hessian. A wrong Hessian can
-# keep those laws, so we also test the hooks against independent references: the
-# closed-form output Hessian against `torch.func.hessian` of $-\log p(y \mid
-# f)$, which for Bradley–Terry doesn't depend on $y$, and `sqrt_mv` against $A
-# A^\top = H$. The link has a checker, `lk.testing.check_link`. It checks that
-# `supports` agrees with the call and that the result is a valid distribution.
+# `lk.testing.check_likelihood` checks the laws the core relies on, such as a `log_prob` shaped `[N]` and a symmetric PSD output Hessian.
+# A wrong Hessian can keep those laws, so we also test the hooks against independent references.
+# We compare the closed-form output Hessian with `torch.func.hessian` of $-\log p(y \mid f)$, which for Bradley–Terry doesn't depend on $y$.
+# We also check `sqrt_mv` against $A A^\top = H$.
+# The link has its own checker, `lk.testing.check_link`, which checks that `supports` agrees with the call and that the result is a valid distribution.
 
 
 # %%

@@ -4,14 +4,14 @@
 # jupyter: python3
 # ---
 #
-# Every extension point in **laplacekit** is a *protocol*: a class that lists the
-# methods a plugin must have. Write your class as a subclass of it, and your
-# editor marks a missing or misspelled method in red while you type.
+# Every extension point in **laplacekit** is a *protocol*: a class that lists the methods a plugin must have.
+# If you write your class as a subclass of it, your editor marks a missing or misspelled method in red while you type.
 #
-# ## Inherit the protocol
+# ## Inherit the protocol: an example
 #
-# The likelihood protocol, `lk.core.Likelihood`, requires one method, `log_prob`.
-# A Student-t likelihood subclasses it and implements that method:
+# Let's use the likelihood protocol, `lk.core.Likelihood`, as an example.
+# It requires one method, `log_prob`.
+# We create a new Student-t likelihood by subclassing it and implementing that method:
 
 # %%
 import torch
@@ -33,7 +33,7 @@ class StudentT(lk.core.Likelihood):
 
 
 # %% [markdown]
-# It goes wherever a built-in likelihood goes:
+# It can then go wherever a built-in likelihood goes:
 
 # %%
 torch.manual_seed(0)
@@ -53,7 +53,7 @@ out = lk.predict_outputs(post, x[:3])
 out.mean.squeeze(-1), out.stddev.squeeze(-1)
 
 # %% [markdown]
-# ## A missing method is red in the editor
+# ## Protocols behave like abstract base classes
 #
 # Leave `log_prob` out, or misspell it, and the class is incomplete:
 #
@@ -64,16 +64,13 @@ out.mean.squeeze(-1), out.stddev.squeeze(-1)
 # StudentT()  # Cannot instantiate abstract class "StudentT"
 # ```
 #
-# PyCharm marks the class itself. VS Code (Pylance) and `ty` mark the line that
-# builds it; add `@typing.final` above the class to get the mark on the class
-# line too. If you run the code anyway, Python refuses to build the object:
-# `TypeError: Can't instantiate abstract class StudentT without an implementation
-# for abstract method 'log_prob'`.
+# IDEs like PyCharm and VS Code will complain.
+# If you run the code anyway, Python refuses to build the object: `TypeError: Can't instantiate abstract class StudentT without an implementation for abstract method 'log_prob'`.
 #
 # ::: {.callout-note}
 # ## Turn checking on in VS Code
-# Pylance checks types only when asked. One line in your plugin's
-# `pyproject.toml` turns it on for everyone who opens the project:
+# Pylance checks types only when asked.
+# One line in your plugin's `pyproject.toml` turns it on for everyone who opens the project:
 #
 # ```toml
 # [tool.pyright]
@@ -81,17 +78,19 @@ out.mean.squeeze(-1), out.stddev.squeeze(-1)
 # ```
 # :::
 #
-# A class without the base still works: **laplacekit** only looks at its
-# methods. But then the editor can only check it where you pass it in, and a
-# missing method shows up later, when it is needed.
+# Subclassing is optional.
+# A class without the base still works, since **laplacekit** only looks at its methods.
+# But then the editor can only check it where you pass it in, and a missing method shows up later, when it is needed.
 #
 # ## Optional methods add capabilities
 #
-# Some features need more than the required method. Each one is its own small
-# protocol, named `Has...`, with one method. You add the method when you want
-# the feature. `lk.predict` gives a distribution over targets, so it needs the
-# likelihood's distribution (`HasDistribution`). Our class has none, and the
-# error says so before any computation:
+# Some features need more than the required method.
+# Each one is its own small protocol, named `Has...` (e.g., `HasDistribution`), with one method.
+# You add the method when you want the feature.
+#
+# As an example, `lk.predict` gives a distribution over targets, so it needs the likelihood's distribution.
+# The `HasDistribution` protocol asks us to implement a method called `distribution` in our class.
+# Our current class has none, so `lk.predict` raises an error before computing anything:
 
 # %%
 try:
@@ -100,15 +99,15 @@ except lk.CapabilityError as e:
     print(e)
 
 # %% [markdown]
-# [A likelihood](likelihood.py) lists every optional method a likelihood can
-# have, and [a curvature](curvature.py) and [a predictive](predictive.py) list
-# theirs.
+# [A likelihood](likelihood.py) lists every optional method a likelihood can have.
+# [A curvature](curvature.py) and [a predictive](predictive.py) list theirs.
 #
 # ## Check the behavior
 #
-# The editor checks that the methods exist and have the right signatures. The
-# `lk.testing.check_*` functions check what they compute, such as `log_prob`
-# returning one value per example. [Testing](testing.qmd) has them all:
+# The editor checks that the methods exist and have the right signatures.
+# It cannot check what they compute.
+# That is the job of the `lk.testing.check_*` functions, e.g., that `log_prob` returns one value per example.
+# [Testing](testing.qmd) lists them all:
 
 # %%
 lk.testing.check_likelihood(StudentT(), model(x).double().detach(), y.double())

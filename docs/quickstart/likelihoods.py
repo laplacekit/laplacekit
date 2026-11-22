@@ -6,17 +6,15 @@
 #
 # ::: {.callout-tip}
 # ## New to protocols?
-# The contract below is a protocol. Subclass it, as in
-# `class MyClass(lk.core.Likelihood):`, and your editor marks a missing method in red.
+# The contract below is a protocol.
+# Subclass it, as in `class MyClass(lk.core.Likelihood):`, and your editor marks a missing method in red.
 # [Protocols in one page](../plugins/protocols.py) shows how.
 # :::
 #
-# A likelihood that **laplacekit** doesn't ship needs one function, `log_prob(f,
-# y)`, returning $\log p(y \mid f)$ per example. Our example is the
-# Bradley–Terry model for pairwise preferences, as in reward models: a network
-# scores two items, and the label says whether the first one wins. For real
-# reward models, `lk.reward` ships it ready to use: see [Reward
-# models](reward.py).
+# A likelihood that **laplacekit** doesn't ship needs one function, `log_prob(f, y)`, which returns $\log p(y \mid f)$ per example.
+# As an example, let's use the Bradley–Terry model for pairwise preferences, as in reward models.
+# There, a network scores two items, and the label says whether the first one wins.
+# For real reward models, `lk.reward` ships this likelihood ready to use (see [Reward models](reward.py)).
 
 # %%
 import math
@@ -66,8 +64,7 @@ print(post)
 
 # %% [markdown]
 # A bare `log_prob` gives no distribution over $y$, so `lk.predict` refuses.
-# `lk.predict_outputs` still gives the Gaussian over the two scores, and we finish the
-# prediction by hand.
+# `lk.predict_outputs` still gives the Gaussian over the two scores, and we finish the prediction by hand.
 
 # %%
 t = torch.linspace(-6, 6, 300)
@@ -100,17 +97,14 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# Outside the data range, the MAP model goes to $0$ or $1$, and the Laplace
-# predictive stays less sure.
+# Outside the data range, the MAP model goes to $0$ or $1$, while the Laplace predictive stays less sure.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# With scores $f = (f_1, f_2)$, the Bradley–Terry likelihood is $p(y = 1 \mid
-# f) = \sigma(f_1 - f_2)$. Without the output Hessian or samples of $y$, the
-# only curvature left is the empirical Fisher, the outer product of the
-# per-example gradients at the observed labels, so `lk.laplace` picks
-# `DiagGGN(fisher="empirical")`. The linearized scores are Gaussian with mean $m$ and
-# covariance $V$, so the difference $f_1 - f_2$ has mean $m_1 - m_2$ and
-# variance $V_{11} + V_{22} - 2 V_{12}$, and the probit approximation gives
+# With scores $f = (f_1, f_2)$, the Bradley–Terry likelihood is $p(y = 1 \mid f) = \sigma(f_1 - f_2)$.
+# Without the output Hessian or samples of $y$, the only curvature left is the empirical Fisher, the outer product of the per-example gradients at the observed labels.
+# So `lk.laplace` picks `DiagGGN(fisher="empirical")`.
+# The linearized scores are Gaussian with mean $m$ and covariance $V$, so the difference $f_1 - f_2$ has mean $m_1 - m_2$ and variance $V_{11} + V_{22} - 2 V_{12}$.
+# The probit approximation then gives
 #
 # $$
 #   p(y = 1 \mid x, \mathcal{D}) \approx \sigma\left( \frac{m_1 - m_2}{\sqrt{1 + \frac{\pi}{8} (V_{11} + V_{22} - 2 V_{12})}} \right) .

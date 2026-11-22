@@ -4,10 +4,9 @@
 # jupyter: python3
 # ---
 #
-# The linearized Laplace approximation is also a Gaussian process over the
-# network's outputs. As a GP, it can condition on a random subset of the
-# training points instead of all of them. We use the sine data of the
-# [regression page](regression.py).
+# The linearized Laplace approximation is also a Gaussian process over the network's outputs.
+# As a GP, it can condition on a random subset of the training points instead of all of them.
+# Let's see this on the sine data of the [regression page](regression.py).
 
 # %%
 import matplotlib.pyplot as plt
@@ -34,8 +33,7 @@ for _ in range(1000):
 
 # %% [markdown]
 # We fit the usual weight-space posterior first, to get a tuned prior and noise.
-# Then `fs.laplace` builds a GP on 30 of the 150 points, with the same prior and
-# likelihood.
+# Then `fs.laplace` builds a GP on 30 of the 150 points, with the same prior and likelihood.
 
 # %%
 post = lk.laplace(model, [(x, y)], likelihood=lk.Gaussian())
@@ -68,29 +66,23 @@ for ax, posterior, name in zip(
 plt.show()
 
 # %% [markdown]
-# The GP sees only a fifth of the data, so its band is wider, most of all on
-# the left. With `n_subset=150`, it would match the weight-space posterior up to
-# rounding.
+# The GP sees only a fifth of the data, so its band is wider, especially on the left.
+# With `n_subset=150`, it would match the weight-space posterior up to rounding.
 #
 # ::: {.callout-note collapse="true" title="The math"}
-# Let $J(x)$ be the Jacobian of the outputs with respect to the parameters at
-# $\theta_*$, and $\Sigma_0 = \lambda^{-1} I$ the prior covariance. The
-# linearized network is a GP with kernel $k(x, x') = J(x) \Sigma_0 J(x')^\top$.
-# Stack the Jacobians of the training inputs into $J_N$ and the output
-# Hessians of the negative log-likelihood into the block-diagonal $\Lambda$
-# (here $1/\sigma^2$). The Woodbury identity turns the weight-space covariance
-# into the GP posterior,
+# Let $J(x)$ be the Jacobian of the outputs with respect to the parameters at $\theta_*$, and $\Sigma_0 = \lambda^{-1} I$ the prior covariance.
+# The linearized network is a GP with kernel $k(x, x') = J(x) \Sigma_0 J(x')^\top$.
+# Stack the Jacobians of the training inputs into $J_N$ and the output Hessians of the negative log-likelihood into the block-diagonal $\Lambda$ (here $1/\sigma^2$).
+# The Woodbury identity turns the weight-space covariance into the GP posterior,
 #
 # $$
 #   J(x_*) \Sigma J(x_*)^\top = K_{**} - K_{N*}^\top \Lambda^{1/2} \big( I + \Lambda^{1/2} K_{NN} \Lambda^{1/2} \big)^{-1} \Lambda^{1/2} K_{N*} ,
 # $$
 #
-# with $K_{NN} = J_N \Sigma_0 J_N^\top$, $K_{N*} = J_N \Sigma_0 J(x_*)^\top$ and
-# $K_{**} = k(x_*, x_*)$. A subset of data keeps $m$ of the $N$ training
-# inputs, so the matrix to factorize is $m E \times m E$ for $E$ outputs.
+# with $K_{NN} = J_N \Sigma_0 J_N^\top$, $K_{N*} = J_N \Sigma_0 J(x_*)^\top$ and $K_{**} = k(x_*, x_*)$.
+# A subset of data keeps $m$ of the $N$ training inputs, so the matrix to factorize is $m E \times m E$ for $E$ outputs.
 # :::
 #
-# For methods that use all the data at scale, see [GP methods](gp.py), the
-# `lk.gp` plugin.
+# For methods that use all the data at scale, see [GP methods](gp.py), the `lk.gp` plugin.
 #
 # The full tutorial: [Function space](../examples/function_space.py)

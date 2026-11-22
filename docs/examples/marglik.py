@@ -15,41 +15,34 @@
 # ```
 # :::
 #
-# A network has hyperparameters that its training loss can't pick: the weight
-# decay, which is a prior precision $\lambda$ in disguise, and in regression the
-# noise $\sigma$. We usually pick them by a grid search, with one training run
-# per value, each scored on held-out data. The marginal likelihood picks them
-# from the training data alone. For hyperparameters $h$, it is
+# A network has hyperparameters that its training loss can't pick: the weight decay, which is a prior precision $\lambda$ in disguise, and, in regression, the noise $\sigma$.
+# We usually pick them by a grid search, with one training run per value, each scored on held-out data.
+# The marginal likelihood picks them from the training data alone.
+# For hyperparameters $h$, it is
 #
 # $$
 #   p(\mathcal{D} \mid h) = \int p(\mathcal{D} \mid \theta, h) \, p(\theta \mid h) \, \mathrm{d}\theta .
 # $$
 #
-# It rewards a good fit of the data and penalizes a prior that spreads its mass
-# over weights the data rule out. For a network the integral is intractable, but
-# the Laplace approximation around weights $\theta_*$ gives it in closed form:
+# It rewards a good fit of the data and penalizes a prior that spreads its mass over weights the data rule out.
+# For a network, the integral is intractable, but the Laplace approximation around weights $\theta_*$ gives it in closed form:
 #
 # $$
 #   \log p(\mathcal{D} \mid h) \approx \log p(\mathcal{D} \mid \theta_*, h) + \log p(\theta_* \mid h) - \frac{1}{2} \log \det \frac{\Lambda(h) + N G}{2 \pi} ,
 # $$
 #
-# with $\Lambda(h)$ the prior precision and $G$ the GGN averaged over the $N$
-# data points. This is what `post.log_marglik()` computes and what the default
-# tune of `lk.laplace` maximizes. After training, though, it can only pick the
-# $\lambda$ of the posterior. The network itself was already trained with some
-# other weight decay. Immer et al. (2021)[^immer2021] learn both during the
-# training, with their Algorithm 1:
+# with $\Lambda(h)$ the prior precision and $G$ the GGN averaged over the $N$ data points.
+# This is what `post.log_marglik()` computes, and what the default hyper tuner of `lk.laplace` maximizes.
+# After training, though, it can only pick the $\lambda$ of the posterior, while the network itself was already trained with some other weight decay.
+# Immer et al. (2021)[^immer2021] learn both during training, with their Algorithm 1:
 #
-# 1. One epoch of gradient steps on $\theta$ for the negative log joint
-#    $-\log p(\mathcal{D} \mid \theta, h) - \log p(\theta \mid h)$, at the current $h$.
-# 2. Every $F$ epochs, a Laplace fit at the current $\theta$, then $K$ gradient
-#    steps on $\log h$ for the negative log marginal likelihood above.
+# 1. One epoch of gradient steps on $\theta$ for the negative log joint $-\log p(\mathcal{D} \mid \theta, h) - \log p(\theta \mid h)$, at the current $h$.
+# 2. Every $F$ epochs, a Laplace fit at the current $\theta$, then $K$ gradient steps on $\log h$ for the negative log marginal likelihood above.
 #
-# Step 1 is ordinary training, with the prior as the weight decay. Step 2 moves
-# $\lambda$ and $\sigma$ with $\theta$ fixed. At the end, they keep the
-# network of the epoch with the highest evidence. `lk.marglik.train` (the
-# `laplacekit-marglik` plugin, installed with the `marglik` extra) runs this
-# loop, with $F$ as `every` and $K$ as `hypersteps` (10 by default).
+# Step 1 is ordinary training, with the prior as the weight decay.
+# Step 2 moves $\lambda$ and $\sigma$ with $\theta$ fixed.
+# At the end, they keep the network of the epoch with the highest evidence.
+# `lk.marglik.train` (the `laplacekit-marglik` plugin, installed with the `marglik` extra) runs this loop, with $F$ as `marglik_frequency` (1 by default) and $K$ as `n_hypersteps` (10 by default).
 
 # %%
 import matplotlib.pyplot as plt
@@ -62,13 +55,11 @@ import laplacekit as lk
 # %% [markdown]
 # ## Data and model
 #
-# We use the sine of the [regression page](regression.py): 150 points with $x$
-# uniform in $[0, 8]$ and noise $\sigma = 0.3$. The network has one hidden
-# layer of 50 tanh units, 151 weights. The test set has 200 noisy points on
-# $[-2, 10]$, and we report the predictive negative log-likelihood (NLL) per
-# point on the data range and past it, on $[-2, 0)$ and $(8, 10]$, where the
-# network has to extrapolate. `mlp(seed)` draws the initial weights from a seed,
-# so every method can start from the same ones.
+# We use the sine of the [regression page](regression.py): 150 points with $x$ uniform in $[0, 8]$ and noise $\sigma = 0.3$.
+# The network has one hidden layer of 50 tanh units, with 151 weights.
+# The test set has 200 noisy points on $[-2, 10]$.
+# We report the predictive negative log-likelihood (NLL) per point on the data range, and past it, on $[-2, 0)$ and $(8, 10]$, where the network has to extrapolate.
+# `mlp(seed)` draws the initial weights from a seed, so every method can start from the same ones.
 
 # %%
 torch.set_default_dtype(torch.float64)
@@ -114,10 +105,9 @@ def marglik(seed: int, prior: str) -> lk.marglik.Trained:
 # %% [markdown]
 # ## Training with the marginal likelihood
 #
-# The optimizer has no weight decay, since $\lambda$ sets it, and `train`
-# refuses one that has. We train for 300 epochs and estimate the
-# hyperparameters after every fifth (`marglik_frequency=5`). The prior is
-# `lk.priors.Layerwise` by default, with one $\lambda$ per layer, and $\sigma$ starts at the 1 of `lk.Gaussian()`.
+# The optimizer has no weight decay, since $\lambda$ plays that role, and `train` refuses an optimizer that has one.
+# We train for 300 epochs and estimate the hyperparameters after every fifth (`marglik_frequency=5`).
+# The prior is `lk.priors.Layerwise` by default, with one $\lambda$ per layer, and $\sigma$ starts at the 1 of `lk.Gaussian()`.
 
 # %%
 trained = marglik(0, "layerwise")
@@ -125,21 +115,18 @@ print(trained.posterior)
 print("sigma:", round(float(trained.posterior.likelihood.sigma), 3))
 
 # %% [markdown]
-# `train` kept epoch 270. The learned $\sigma$ is 0.304, and the first layer
-# gets the weaker prior, with $\lambda = 0.226$ against 0.621 for the last.
-# `prior=lk.priors.Isotropic` would share one $\lambda$ over all weights
-# instead, and `lk.priors.Diagonal` gives each weight its own.
+# `train` kept epoch 270.
+# The learned $\sigma$ is 0.304, and the first layer gets the weaker prior, with $\lambda = 0.226$ against 0.621 for the last.
+# `prior=lk.priors.Isotropic` would share one $\lambda$ over all weights instead, and `lk.priors.Diagonal` would give each weight its own.
 #
 # ## Against weight decay
 #
-# The usual alternative trains with a weight decay picked by hand. We train
-# the same network with the mean squared error and Adam's weight decay of
-# $10^{-4}$, $10^{-3}$ and $10^{-2}$. After each run, `lk.laplace` over all
-# weights tunes one $\lambda$ and $\sigma$ for it by the evidence. Marglik
-# training runs once with `Layerwise` and once with `Isotropic`, the same
-# prior structure as these baselines. We repeat everything for three
-# initializations and print the mean and the standard deviation over them of
-# the log evidence $\log Z$ of the final posterior and of the test NLL.
+# The usual alternative trains with a weight decay picked by hand.
+# We train the same network with the mean squared error and Adam's weight decay of $10^{-4}$, $10^{-3}$ and $10^{-2}$.
+# After each run, `lk.laplace` over all weights tunes one $\lambda$ and $\sigma$ for it by the evidence.
+# Marglik training runs once with `Layerwise`, and once with `Isotropic`, the same prior structure as these baselines.
+# We repeat everything for three initializations.
+# Over them, we print the mean and the standard deviation of the log evidence $\log Z$ of the final posterior, and of the test NLL.
 
 
 # %%
@@ -199,27 +186,20 @@ for name, values in rows.items():
     print(f"{name:18} {cells}")
 
 # %% [markdown]
-# On the data, marglik training is slightly better than the best decay: an
-# NLL of 0.273 with one $\lambda$ per layer and 0.274 with a shared one,
-# against 0.278 for $10^{-3}$, and 0.282 and 0.308 for the other two decays.
-# With one $\lambda$ per layer, it also reaches the highest evidence,
-# $-75.863$, against $-76.477$ for $10^{-3}$, the best decay. With a shared
-# $\lambda$ it is close behind, at $-76.722$. This is what Immer et al. are
-# after: the evidence ranks the networks without validation data, and a
-# single marglik run lands at or near the top of that ranking, where the
-# decays need a run per value.
+# On the data, marglik training is slightly better than the best decay.
+# It gets an NLL of 0.273 with one $\lambda$ per layer and 0.274 with a shared one, against 0.278 for $10^{-3}$, and 0.282 and 0.308 for the other two decays.
+# With one $\lambda$ per layer, it also reaches the highest evidence, $-75.863$, against $-76.477$ for $10^{-3}$, the best decay.
+# With a shared $\lambda$, it is close behind, at $-76.722$.
+# This is what Immer et al. are after: the evidence ranks the networks without validation data.
+# A single marglik run lands at or near the top of that ranking, while the decays need a run per value.
 #
-# Past the data, the order turns around. The decay of $10^{-2}$ has the lowest
-# evidence ($-81.704$) and the best NLL (2.876), and the two marglik runs have
-# the worst NLL (3.749 and 3.766). The spread over the
-# three initializations is large there, 0.295 to 0.615, so the trend is
-# clearer than the order of neighbouring rows. No network predicts the sine
-# past the data (an NLL around 3, against 0.27 on it). The evidence measures
-# how well a network explains the training data, so it has nothing to say
-# about the bands where there are no data.
+# Past the data, the order turns around.
+# The decay of $10^{-2}$ has the lowest evidence ($-81.704$) and the best NLL (2.876), and the two marglik runs have the worst NLL (3.749 and 3.766).
+# The spread over the three initializations is large there, 0.295 to 0.615, so the trend is clearer than the order of neighboring rows.
+# No network predicts the sine past the data (an NLL around 3, against 0.27 on it).
+# The evidence measures how well a network explains the training data, so it has nothing to say about the regions where there are no data.
 #
-# The plot shows the log marginal likelihood at every hyperparameter step of
-# the first initialization: 10 per estimation, 60 estimations.
+# The plot shows the log marginal likelihood at every hyperparameter step of the first initialization: 10 steps per estimation, and 60 estimations.
 
 # %%
 scalar = runs[0, "scalar"]
@@ -235,24 +215,21 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# For both priors, the evidence climbs during about the first 20 estimations
-# (100 epochs) and then levels off. Within one estimation it rises step by
-# step. The jumps between estimations come from the five epochs of training in
-# between, and the two dips, near step 150 and between steps 360 and 390, are
-# such jumps. That is why `train` keeps the best epoch instead of the last.
+# For both priors, the evidence climbs during about the first 20 estimations (100 epochs) and then levels off.
+# Within one estimation, it rises step by step.
+# The jumps between estimations come from the five epochs of training in between.
+# The two dips, near step 150 and between steps 360 and 390, are such jumps.
+# That is why `train` keeps the best epoch instead of the last.
 #
 # ## Heteroscedastic regression
 #
-# Immer et al. (2023)[^immer2023] train heteroscedastic networks, which predict
-# the noise too, the same way. The network's two outputs go through
-# `lk.heteroscedastic.NaturalHead` into the natural parameters of a Gaussian,
-# $\eta = (\mu / \sigma^2, -1 / (2 \sigma^2))$, and
-# `lk.heteroscedastic.NaturalGaussian` reads them (see
-# [Heteroscedastic regression](heteroscedastic.py)). This likelihood has no
-# hyperparameters, so `train` learns $\lambda$ alone. Our data are the sine of
-# that page, with noise growing away from the origin, $\sigma(x) = 0.05 + 0.15
-# |x|$, and a gap with no data on $(-0.7, 0.7)$. The network has two hidden
-# layers of 16 units. We start $\lambda$ at 0.01 with `prior_init`.
+# Immer et al. (2023)[^immer2023] train heteroscedastic networks, which predict the noise too, the same way.
+# The network's two outputs go through `lk.heteroscedastic.NaturalHead` into the natural parameters of a Gaussian, $\eta = (\mu / \sigma^2, -1 / (2 \sigma^2))$.
+# `lk.heteroscedastic.NaturalGaussian` then reads them (see [Heteroscedastic regression](heteroscedastic.py)).
+# This likelihood has no hyperparameters, so `train` learns $\lambda$ alone.
+# Our data are the sine of that page, with noise growing away from the origin, $\sigma(x) = 0.05 + 0.15 |x|$, and a gap with no data on $(-0.7, 0.7)$.
+# The network has two hidden layers of 16 units.
+# We start $\lambda$ at 0.01 with `prior=lk.priors.Layerwise(0.01)`.
 
 # %%
 torch.manual_seed(2023)
@@ -309,28 +286,26 @@ ax.legend()
 plt.show()
 
 # %% [markdown]
-# At $x = 2$ and $x = 3$ the learned noise is close to the truth: 0.370
-# against 0.350, and 0.521 against 0.500. At $x = 1$ it is too large, 0.287
-# against 0.200. Past the data it falls behind the truth on both sides. On the
-# right it stops growing, at 0.527 for $x = 4$ against a true 0.650, and on the
-# left it still rises, but more slowly than the truth, as the plot shows. Across
-# the gap it stays flat.
+# At $x = 2$ and $x = 3$, the learned noise is close to the truth: 0.370 against 0.350, and 0.521 against 0.500.
+# At $x = 1$, it is too large, 0.287 against 0.200.
+# Past the data, it falls behind the truth on both sides.
+# On the right, it stops growing, at 0.527 for $x = 4$ against a true 0.650.
+# On the left, it still rises, but more slowly than the truth, as the plot shows.
+# Across the gap, it stays flat.
 
 # %% [markdown]
 # ::: {.callout-note title="Differences from `laplace-torch`"}
-# `laplace-torch`'s `marglik_training` runs the same algorithm, with these
-# differences:
+# `laplace-torch`'s `marglik_training` runs the same algorithm, with these differences:
 #
-# - The training loss of a Gaussian. `train` takes the negative log joint per
-#   example at the current $\sigma$. `laplace-torch` multiplies its loss by
-#   $2 \sigma^2 T$, with $T$ the temperature, so with a learned $\sigma$ the two
-#   trajectories differ.
-# - `lk.priors.Layerwise` is one $\lambda$ per module, so a layer's weight and bias
-#   share it. `laplace-torch` has one per parameter tensor.
-# - The default curvature is the default of `lk.laplace`, here a dense GGN per
-#   layer. `laplace-torch` defaults to KFAC.
-# - An optimizer with weight decay raises `ValueError`. `laplace-torch` warns
-#   and sets the decay to zero.
+# - The training loss of a Gaussian:
+#   `train` takes the negative log joint per example at the current $\sigma$.
+#   `laplace-torch` multiplies its loss by $2 \sigma^2 T$, with $T$ the temperature, so with a learned $\sigma$ the two trajectories differ.
+# - `lk.priors.Layerwise` is one $\lambda$ per module, so a layer's weight and bias share it.
+#   `laplace-torch` has one per parameter tensor.
+# - The default curvature is the default of `lk.laplace`, here a dense GGN per layer.
+#   `laplace-torch` defaults to KFAC.
+# - An optimizer with weight decay raises `ValueError`.
+#   `laplace-torch` warns and sets the decay to zero.
 # - `train` leaves the module in train or eval mode, as it found it.
 #   `laplace-torch` leaves it in eval mode.
 # - There is no temperature.

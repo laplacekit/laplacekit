@@ -14,28 +14,21 @@
 # ```
 # :::
 #
-# Suppose the data arrive in two parts, $\mathcal{D}_1$ and then
-# $\mathcal{D}_2$. Bayes' rule lets us process them one after the other, with
-# the posterior after $\mathcal{D}_1$ as the prior for $\mathcal{D}_2$:
+# Suppose the data arrive in two parts, $\mathcal{D}_1$ and then $\mathcal{D}_2$.
+# Bayes' rule lets us process them one after the other, with the posterior after $\mathcal{D}_1$ as the prior for $\mathcal{D}_2$:
 #
 # $$
 #   p(\theta \mid \mathcal{D}_1, \mathcal{D}_2) \propto p(\mathcal{D}_2 \mid \theta) \, p(\theta \mid \mathcal{D}_1) .
 # $$
 #
-# Laplace for continual learning (Ritter et al., 2018)[^ritter2018] replaces
-# $p(\theta \mid \mathcal{D}_1)$ by its Laplace approximation
-# $\mathcal{N}(\theta \mid \theta_1, \Lambda_1^{-1})$. We train on
-# $\mathcal{D}_2$ with the negative log-density of that Gaussian as the
-# regularizer, which gives $\theta_2$, and fit a Laplace approximation with
-# $\Lambda_2 = \Lambda_1 + N_2 G_2$. In general, this loses information at
-# each step. For a linear-Gaussian model, the log posterior is exactly
-# quadratic, so each Laplace approximation is exact, and the continual posterior
-# equals the one fitted on all the data at once.
+# Laplace for continual learning (Ritter et al., 2018)[^ritter2018] replaces $p(\theta \mid \mathcal{D}_1)$ by its Laplace approximation $\mathcal{N}(\theta \mid \theta_1, \Lambda_1^{-1})$.
+# We train on $\mathcal{D}_2$ with the negative log-density of that Gaussian as the regularizer, which gives $\theta_2$.
+# Then we fit a Laplace approximation with $\Lambda_2 = \Lambda_1 + N_2 G_2$.
+# In general, this loses information at each step.
+# For a linear-Gaussian model, the log posterior is exactly quadratic, so each Laplace approximation is exact, and the continual posterior equals the one fitted on all the data at once.
 #
-# We use the sine data and the network of the [regression
-# page](regression.py). Its last layer, with the hidden layer kept fixed, is
-# such a linear-Gaussian model, so we can check the continual posterior against
-# the batch one.
+# We use the sine data and the network of the [regression page](regression.py).
+# Its last layer, with the hidden layer kept fixed, is such a linear-Gaussian model, so we can check the continual posterior against the batch one.
 
 # %%
 import matplotlib.pyplot as plt
@@ -47,10 +40,9 @@ import laplacekit as lk
 # %% [markdown]
 # ## Data and model
 #
-# As on the regression page, we draw 150 points with $x$ uniform in $[0, 8]$
-# and $y = \sin(x) + \varepsilon$, $\varepsilon \sim \mathcal{N}(0, 0.3^2)$,
-# and train a network with one hidden layer of 50 tanh units. We split the
-# data at $x = 4$ into $\mathcal{D}_1$ (left) and $\mathcal{D}_2$ (right).
+# As on the regression page, we draw 150 points with $x$ uniform in $[0, 8]$ and $y = \sin(x) + \varepsilon$, $\varepsilon \sim \mathcal{N}(0, 0.3^2)$.
+# The network has one hidden layer of 50 tanh units.
+# We split the data at $x = 4$ into $\mathcal{D}_1$ (left) and $\mathcal{D}_2$ (right).
 
 # %%
 torch.set_default_dtype(torch.float64)
@@ -74,20 +66,17 @@ d1, d2 = [(x[left], y[left])], [(x[~left], y[~left])]
 # %% [markdown]
 # ## Two fits in a row
 #
-# Training on a part minimizes the negative log joint of the last layer, the
-# squared error divided by $2 \sigma^2$ minus the log prior. The prior is
-# either the first one, $\mathcal{N}(0, I)$, or the previous posterior. Both
-# have a `log_prob` of the parameters, so `train` takes either.
+# Training on a part minimizes the negative log joint of the last layer, i.e., the squared error divided by $2 \sigma^2$ minus the log prior.
+# The prior is either the first one, $\mathcal{N}(0, I)$, or the previous posterior.
+# Both have a `log_prob` over the parameters, so `train` takes either.
 #
-# We fix $\sigma = 0.3$ and $\lambda = 1$ and pass `hyper_tuner=None`. Each Laplace
-# approximation then sits at the mode of the objective that `train`
-# minimized. With a posterior as the prior, `lk.laplace` has nothing to tune,
-# but the first fit would otherwise move $\lambda$ and $\sigma$ away from the
-# values that `train` used.
+# We fix $\sigma = 0.3$ and $\lambda = 1$, and pass `hyper_tuner=None`.
+# Each Laplace approximation then sits at the mode of the objective that `train` minimized.
+# With a posterior as the prior, `lk.laplace` has nothing to tune anyway.
+# But without `hyper_tuner=None`, the first fit would move $\lambda$ and $\sigma$ away from the values that `train` used.
 #
-# The prior of a fit can be an earlier posterior: `lk.laplace` reads its mean
-# and precision. It also keeps its own copy of the fitted mean, so training the
-# module afterwards leaves `post_1` as it was.
+# The prior of a fit can be an earlier posterior, whose mean and precision `lk.laplace` reads.
+# A posterior also keeps its own copy of the fitted mean, so training the module afterwards leaves `post_1` as it was.
 
 # %%
 last = {"2.weight": model[2].weight, "2.bias": model[2].bias}
@@ -125,8 +114,7 @@ train(*d2[0], post_1)
 post_2 = lk.laplace(model, d2, likelihood=lik, prior=post_1, hyper_tuner=None)
 
 # %% [markdown]
-# For comparison, we also train on all the data at once, from the first
-# prior, and fit the batch posterior.
+# For comparison, we also train on all the data at once, from the first prior, and fit the batch posterior.
 
 # %%
 train(x, y, prior)
@@ -137,9 +125,8 @@ batch = lk.laplace(
 # %% [markdown]
 # ## Continual against batch
 #
-# Below, the left panel shows the band after $\mathcal{D}_1$ only, and the
-# right one the band after both parts, with the batch fit's band as dashed
-# lines.
+# Below, the left panel shows the band after $\mathcal{D}_1$ only.
+# The right one shows the band after both parts, with the batch fit's band as dashed lines.
 
 # %%
 t = x_test.squeeze()
@@ -183,45 +170,38 @@ print("max |mean difference|:      ", f"{gap:.1g}")
 print("max |covariance difference|:", f"{float(cov_gap.abs().max()):.1g}")
 
 # %% [markdown]
-# The two posteriors agree. The covariances match to rounding, and the means
-# to the tolerance of the optimizer. After $\mathcal{D}_1$ alone, the band
-# widens over $[4, 8]$, where there are no data yet. After $\mathcal{D}_2$, it
-# narrows there as in the batch fit.
+# The two posteriors agree.
+# The covariances match to rounding, and the means to the tolerance of the optimizer.
+# After $\mathcal{D}_1$ alone, the band widens over $[4, 8]$, where there are no data yet.
+# After $\mathcal{D}_2$, it narrows there as in the batch fit.
 #
 # ## Continual learning with KFAC
 #
-# KFAC stores each layer's curvature as a Kronecker product $B \otimes A$ (see
-# the [curvature page](curvature.py)), where $A$ averages the layer's inputs
-# $a a^\top$ and $B$ the gradients sent back to its output. After the two parts,
-# a layer's precision should be
+# KFAC stores each layer's curvature as a Kronecker product $B \otimes A$ (see the [curvature page](curvature.py)).
+# Here, $A$ averages the layer's inputs $a a^\top$, and $B$ the gradients sent back to its output.
+# After the two parts, a layer's precision should be
 #
 # $$
 #   \Lambda_2 = \lambda I + c_1 \, B_1 \otimes A_1 + c_2 \, B_2 \otimes A_2 ,
 # $$
 #
-# where $c_t = N_t / \sigma^2$ for our Gaussian likelihood, and $A_t$, $B_t$ are
-# the per-example averages over $\mathcal{D}_t$. The sum of two Kronecker
-# products is not a Kronecker product, so $\Lambda_2$ loses the cheap
-# eigendecomposition that KFAC relies on. Ritter et al. (2018)[^ritter2018] sum
-# the factors instead, and `laplace-torch` does the same:
+# where $c_t = N_t / \sigma^2$ for our Gaussian likelihood, and $A_t$, $B_t$ are the per-example averages over $\mathcal{D}_t$.
+# But the sum of two Kronecker products is not a Kronecker product, so $\Lambda_2$ loses the cheap eigendecomposition that KFAC relies on.
+# Ritter et al. (2018)[^ritter2018] sum the factors instead, and `laplace-torch` does the same:
 #
 # $$
 #   c_1 \, B_1 \otimes A_1 + c_2 \, B_2 \otimes A_2
 #     \approx (c_1 B_1 + c_2 B_2) \otimes \frac{c_1 A_1 + c_2 A_2}{c_1 + c_2} .
 # $$
 #
-# The two sides are equal when $B_1 = B_2 = B$, since the right-hand side is
-# then $B \otimes (c_1 A_1 + c_2 A_2)$. On our last layer, this holds. The
-# output is $s = W a$ itself, and the output Hessian of the Gaussian is
-# $I / \sigma^2$, which is already in $c_t$, so $B = I$ for every example. There
-# KFAC is even the GGN, $I \otimes A$, so its continual posterior should match the
-# dense one above.
+# The two sides are equal when $B_1 = B_2 = B$, since the right-hand side is then $B \otimes (c_1 A_1 + c_2 A_2)$.
+# On our last layer, this holds.
+# The output is $s = W a$ itself, and the output Hessian of the Gaussian is $I / \sigma^2$, which is already in $c_t$, so $B = I$ for every example.
+# There, KFAC is even equal to the GGN, $I \otimes A$, so its continual posterior should match the dense one above.
 #
-# In **laplacekit**, a KFAC posterior as the prior of a KFAC fit raises
-# `StructureError`, since the sum is approximate in general. We opt into the
-# approximation with `lk.priors.KronSum.of(post)`. We run the same two steps as
-# before with KFAC, and compare the predictive standard deviation with that of
-# `post_2`.
+# In **laplacekit**, a KFAC posterior as the prior of a KFAC fit raises `StructureError`, since the sum is approximate in general.
+# We opt into the approximation with `lk.priors.KronSum.of(post)`.
+# We run the same two steps as before with KFAC, and compare the predictive standard deviation against that of `post_2`.
 
 # %%
 std_dense = lk.predict(post_2, x_test).stddev
@@ -250,15 +230,13 @@ gap = (lk.predict(kfac_2, x_test).stddev - std_dense).abs().max()
 print(f"largest gap in the standard deviation: {gap:.1e}")
 
 # %% [markdown]
-# The gap is rounding error. On the hidden layer, $B$ depends on the inputs,
-# through the derivative of tanh at the hidden units, and the two parts have
-# their inputs on different halves of $[0, 8]$. So $B_1 \neq B_2$ there, and
-# the sum is approximate. To see by how much, we fit KFAC on all layers, once
-# on $\mathcal{D}_1$ and once on $\mathcal{D}_2$ with the first as the prior,
-# and compare each layer's precision with the exact sum. We get the exact sum
-# from a third fit on $\mathcal{D}_2$ alone: its precision is $\lambda I + c_2
-# B_2 \otimes A_2$. We don't retrain the hidden layer, since only the sum
-# matters here.
+# The gap is rounding error.
+# On the hidden layer, $B$ depends on the inputs, through the derivative of tanh at the hidden units, and the two parts have their inputs on different halves of $[0, 8]$.
+# So $B_1 \neq B_2$ there, and the sum is approximate.
+# To see by how much, we fit KFAC on all layers, once on $\mathcal{D}_1$ and once on $\mathcal{D}_2$ with the first as the prior.
+# Then we compare each layer's precision with the exact sum.
+# We get the exact sum from a third fit on $\mathcal{D}_2$ alone: its precision is $\lambda I + c_2 B_2 \otimes A_2$.
+# We don't retrain the hidden layer, since only the sum matters here.
 
 
 # %%
@@ -293,18 +271,16 @@ for name, layer in [("0", "hidden"), ("2", "last")]:
     print(f"{layer} layer: relative error of KronSum {err:.2g}")
 
 # %% [markdown]
-# On the last layer, the sum is exact to rounding. On the hidden layer, its
-# relative error is 0.4. A classifier is like the hidden layer even on its last
-# layer, since its output Hessian $\mathrm{diag}(p) - p p^\top$ depends on the
-# predictions $p$.
+# On the last layer, the sum is exact to rounding.
+# On the hidden layer, its relative error is 0.4.
+# A classifier is like the hidden layer even on its last layer, since its output Hessian $\mathrm{diag}(p) - p p^\top$ depends on the predictions $p$.
 #
 # ::: {.callout-note}
-# The prior's precision and the new curvature must add. With the diagonal
-# curvature, `lk.DiagGGN()`, in every fit, or the dense GGN on small blocks as
-# here, the sums are exact and cheap. A KFAC posterior goes in as the prior of a
-# KFAC fit through `lk.priors.KronSum.of(post)`, as above. A diagonal posterior
-# can't be the prior of a KFAC fit at all, since KFAC takes only one prior
-# precision per layer, and `lk.laplace` raises `StructureError`.
+# The prior's precision and the new curvature must add.
+# With the diagonal curvature, `lk.DiagGGN()`, in every fit, or the dense GGN on small blocks as here, the sums are exact and cheap.
+# A KFAC posterior goes in as the prior of a KFAC fit through `lk.priors.KronSum.of(post)`, as above.
+# A diagonal posterior can't be the prior of a KFAC fit at all, since KFAC takes only one prior precision per layer.
+# In that case, `lk.laplace` raises `StructureError`.
 # :::
 
 # %% [markdown]
