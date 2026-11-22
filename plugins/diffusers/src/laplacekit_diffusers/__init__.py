@@ -29,7 +29,7 @@ __all__ = ["denoiser", "health", "laplace"]
 
 
 def health() -> tuple[lk.HealthCheck, ...]:
-    """HealthCheck for `lk.health()` that `diffusers` is installed.
+    """Check for `lk.health()` that `diffusers` is installed.
 
     Returns:
         One check, `ok` with the version when `diffusers` is installed and `error`

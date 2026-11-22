@@ -67,7 +67,7 @@ _OPTIONAL = {
 
 
 def health() -> tuple[lk.HealthCheck, ...]:
-    """HealthCheck for `lk.health()` that `transformers` is installed, and `peft` if possible.
+    """Check for `lk.health()` that `transformers` is installed, and `peft` if possible.
 
     Returns:
         One check per package. Each is `ok` with the version when the package is
