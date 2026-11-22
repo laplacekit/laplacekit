@@ -122,7 +122,8 @@ Extending `laplace-torch` means subclassing `BaseLaplace` (a few thousand lines)
 ✅ yes · 🟡 partly · ❌ no · ❓ not checked.
 Details on the [Why page](https://laplacekit.org/why.html#how-it-compares).
 
-> [!TIP] > Coming from `laplace-torch`? > The [Why page](https://laplacekit.org/why.html#coming-from-laplace-torch) maps its API to <code><b>laplacekit</b></code>.
+> [!TIP]
+> Coming from `laplace-torch`? > The [Why page](https://laplacekit.org/why.html#coming-from-laplace-torch) maps its API to <code><b>laplacekit</b></code>.
 
 ## Agent workflow
 
