@@ -1655,7 +1655,13 @@ def test_tune_one_eigh():
 
 
 def test_tune_same_optimum():
-    """lambda and sigma match the Cholesky path's in float64."""
+    """lambda and sigma match the Cholesky path's in float64.
+
+    The log marglik (about -131) is flat at its optimum: moving lambda by 1e-6 relative
+    changes it by about 1e-11, which is round-off. Both paths must reach the same
+    objective value to 1e-8. lambda and sigma are compared at 1e-4, the precision the
+    objective resolves. CI runners differ by 1.2e-6 in lambda, depending on their BLAS.
+    """
 
     model, x, y = _regression(torch.float64)
     data = loader(x, y, k=4)
@@ -1669,10 +1675,12 @@ def test_tune_same_optimum():
     )
 
     assert len(post.curvature.op.eig) == 2
+    torch.testing.assert_close(post.log_marglik(), want.log_marglik(), rtol=0, atol=1e-8)
+
     torch.testing.assert_close(
-        post.prior.prior_precision, want.prior.prior_precision, rtol=1e-6, atol=0
+        post.prior.prior_precision, want.prior.prior_precision, rtol=1e-4, atol=0
     )
-    torch.testing.assert_close(post.likelihood.sigma, want.likelihood.sigma, rtol=1e-6, atol=0)
+    torch.testing.assert_close(post.likelihood.sigma, want.likelihood.sigma, rtol=1e-4, atol=0)
 
 
 def test_eigen_rank_deficient_float32():
