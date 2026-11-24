@@ -7,7 +7,7 @@
 
 <p align="center">
 An extensible, modern <b>Laplace-approximation library</b> for PyTorch, built on a <b>plugin system</b>.
-It supports modern models: Hugging Face LLMs, diffusion models and reward models.
+It supports modern models: Hugging Face LLMs, diffusion models, and reward models.
 </p>
 
 <p align="center">
@@ -20,7 +20,6 @@ It supports modern models: Hugging Face LLMs, diffusion models and reward models
   <img alt="PyTorch 2.15+" src="https://img.shields.io/badge/pytorch-2.15%2B-ee4c2c?style=for-the-badge&logo=pytorch&logoColor=white">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-555555?style=for-the-badge"></a>
 </p>
-
 
 ## Install
 
@@ -65,8 +64,7 @@ posterior = lk.laplace(model, train_loader, lk.Categorical())
 probs = lk.predict(posterior, x_test).probs
 ```
 
-Every choice is an argument.
-A posterior can also be saved and loaded:
+You can specify what kind of Laplace approximation do you want, and the resulting posterior can be saved and loaded:
 
 ```python
 # Fit the posterior
@@ -89,35 +87,38 @@ post = lk.load("post.pt", model)
 
 ## What's new?
 
-**Plugin system.** Think Neovim or VS Code: a new Laplace method is a package.
-Install it with `pip` and pass it to `lk.laplace`.
-The built-in methods are written the same way, against the same public interfaces, with no special access.
-So a third-party method is a first-class citizen, and one fit can mix several plugins.
+**Plugin system.** Think Neovim or VS Code: a new Laplace method (e.g., function-space) or component (e.g., curvature, likelihood, etc.) is a plugin/extension.
+In Python's lingo: it's a PyPI package that satisfies `laplacekit`'s protocols.
+`laplacekit` is aware of the installed plugins: `print(lk.plugins())`---see [documentation](https://laplacekit.org/plugins/first#listing-it).
+Similar to Neovim's `:checkhealth` command, `print(lk.health())` tells us whether plugins are installed correctly or not.
 
-Other libraries work differently.
+The built-in methods are written the same way, against the same public interfaces, with no special access.
+So a third-party plugin is a first-class citizen.
+
+Difference compared to other Laplace libraries:
 Extending `laplace-torch` means subclassing `BaseLaplace` (a few thousand lines) and sending a PR.
-`laplax` and `posteriors` are libraries of functions: you can compose them or write a new method from scratch, but there is no plugin host.
+`laplax`'s and `posteriors`'s functions can be freely composed, but there is no plugin host.
 
 ## How it compares
 
-| | <code><b>laplacekit</b></code> | [`laplace-torch`](https://github.com/aleximmer/Laplace) | [`laplax`](https://github.com/laplax-org/laplax) | [`posteriors`](https://github.com/normal-computing/posteriors) |
-| --- | :---: | :---: | :---: | :---: |
-| Framework | PyTorch | PyTorch | JAX | PyTorch |
-| LLMs (Hugging Face, LoRA) without special code | ✅ | 🟡 | 🟡 | ✅ |
-| Diffusion models | ✅ | ❌ | 🟡 | ❓ |
-| Fit from your own training loop | ✅ | ❌ | ❓ | ✅ |
-| Fully type-checked, with typed extension points | ✅ | ❌ | ❓ | ❓ |
-| Options as typed objects and checked literals | ✅ | ❌ | ❌ | ✅ |
-| Differentiate through the whole fit | ✅ | ❌ | ✅ | ✅ |
-| Diagonal and full curvature | ✅ | ✅ | ✅ | ✅ |
-| KFAC | ✅ | ✅ | ❌ | ❌ |
-| Low-rank curvature | ✅ | ✅ | ✅ | ❌ |
-| Last-layer Laplace | ✅ | ✅ | ❓ | ✅ |
-| Subnetwork Laplace | ✅ | ✅ | ❓ | ✅ |
-| Function-space (GP) Laplace | ✅ | ✅ | ❓ | ❌ |
-| Linearized predictive | ✅ | ✅ | ✅ | 🟡 |
-| Marginal-likelihood tuning | ✅ | ✅ | ✅ | ❌ |
-| Marglik training | ✅ | ✅ | ❓ | ❓ |
+|                                                 | <code><b>laplacekit</b></code> | [`laplace-torch`](https://github.com/aleximmer/Laplace) | [`laplax`](https://github.com/laplax-org/laplax) | [`posteriors`](https://github.com/normal-computing/posteriors) |
+| ----------------------------------------------- | :----------------------------: | :-----------------------------------------------------: | :----------------------------------------------: | :------------------------------------------------------------: |
+| Framework                                       |            PyTorch             |                         PyTorch                         |                       JAX                        |                            PyTorch                             |
+| LLMs (Hugging Face, LoRA) without special code  |               ✅               |                           🟡                            |                        🟡                        |                               ✅                               |
+| Diffusion models                                |               ✅               |                           ❌                            |                        🟡                        |                               ❓                               |
+| Fit from your own training loop                 |               ✅               |                           ❌                            |                        ❓                        |                               ✅                               |
+| Fully type-checked, with typed extension points |               ✅               |                           ❌                            |                        ❓                        |                               ❓                               |
+| Options as typed objects and checked literals   |               ✅               |                           ❌                            |                        ❌                        |                               ✅                               |
+| Differentiate through the whole fit             |               ✅               |                           ❌                            |                        ✅                        |                               ✅                               |
+| Diagonal and full curvature                     |               ✅               |                           ✅                            |                        ✅                        |                               ✅                               |
+| KFAC                                            |               ✅               |                           ✅                            |                        ❌                        |                               ❌                               |
+| Low-rank curvature                              |               ✅               |                           ✅                            |                        ✅                        |                               ❌                               |
+| Last-layer Laplace                              |               ✅               |                           ✅                            |                        ❓                        |                               ✅                               |
+| Subnetwork Laplace                              |               ✅               |                           ✅                            |                        ❓                        |                               ✅                               |
+| Function-space (GP) Laplace                     |               ✅               |                           ✅                            |                        ❓                        |                               ❌                               |
+| Linearized predictive                           |               ✅               |                           ✅                            |                        ✅                        |                               🟡                               |
+| Marginal-likelihood tuning                      |               ✅               |                           ✅                            |                        ✅                        |                               ❌                               |
+| Marglik training                                |               ✅               |                           ✅                            |                        ❓                        |                               ❓                               |
 
 ✅ yes · 🟡 partly · ❌ no · ❓ not checked.
 Details on the [Why page](https://laplacekit.org/why.html#how-it-compares).
@@ -129,15 +130,13 @@ Details on the [Why page](https://laplacekit.org/why.html#how-it-compares).
 
 <code><b>laplacekit</b></code> is designed so that a coding agent can write a new Laplace method without reading the core:
 
-- Each extension point is a small typed interface in its own file.
-  If the agent gets something wrong, `ty` tells it within seconds.
-- Errors say what is missing _and_ what would work instead, so the agent can fix its own mistakes.
-  For example, a wrong argument type, such as `hessian_approx="kron"` or the class `lk.KFAC` instead of an instance, raises a `TypeError` that names what to pass.
+- Each extension point is a small typed interface---everything is typecheckable via `ty check`. Perfect for harnessing agents.
+- Errors say what is missing _and_ what would work instead, so the agent can correct its own mistakes easily.
+  For example, a wrong argument type, such as `hessian_approx="kron"` or the class `lk.KFAC` instead of an instance, raises a `TypeError` that tells what's the correct argument.
 - `print(post)` shows every choice a fit made.
-  As in torch, `torch.manual_seed` (or a `generator=` argument) makes reruns identical.
 - `lk.testing` checks a new plugin against its interface and the laws it must satisfy.
 - `print(lk.health())` reports whether the install works: the torch version, the `curvlinops` pin, autograd on a small model, float64, and each plugin's own checks.
-- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt) index and a Markdown copy of every page, the API reference included, for the agent to read.
+- The docs have an [`llms.txt`](https://laplacekit.org/llms.txt).
 
 ## Citation
 
